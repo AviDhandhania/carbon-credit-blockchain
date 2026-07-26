@@ -26,9 +26,9 @@ def arrow(ax, x1, y1, x2, y2, text="", color="#0d1b2a", style="-|>"):
 
 # ---------------------------------------------------------------- ARCHITECTURE
 def architecture():
-    fig, ax = plt.subplots(figsize=(11, 7.5))
-    ax.set_xlim(0, 12); ax.set_ylim(0, 10); ax.axis("off")
-    ax.text(6, 9.6, "System Architecture — Blockchain Carbon Credit Trading",
+    fig, ax = plt.subplots(figsize=(11, 8.0))
+    ax.set_xlim(0, 12); ax.set_ylim(0, 10.6); ax.axis("off")
+    ax.text(6, 10.3, "System Architecture — Blockchain Carbon Credit Trading",
             ha="center", fontsize=14, weight="bold", color=NAVY)
 
     # Layer bands

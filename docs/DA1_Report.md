@@ -2,6 +2,7 @@
 
 **Course:** Blockchain Technology · **Assessment:** Digital Assignment 1 (DA1)
 **SDG Alignment:** SDG 13 — Climate Action (supporting SDG 7, SDG 12)
+**Submitted by:** Avi Dhandhania (25BCE1207) · Shivesh Kumar (25BCE1067)
 
 ---
 

@@ -57,6 +57,13 @@ def build_docx():
     sg = d.add_paragraph(); sg.alignment = WD_ALIGN_PARAGRAPH.CENTER
     rg = sg.add_run("SDG 13 — Climate Action  |  Supporting SDG 7 & SDG 12"); rg.font.size = Pt(12); rg.font.color.rgb = TEAL; rg.bold = True
     d.add_paragraph()
+    au = d.add_paragraph(); au.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    ra = au.add_run("Submitted by"); ra.font.size = Pt(12); ra.italic = True
+    a1 = d.add_paragraph(); a1.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r1 = a1.add_run("Avi Dhandhania — 25BCE1207"); r1.font.size = Pt(14); r1.bold = True; r1.font.color.rgb = NAVY
+    a2 = d.add_paragraph(); a2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r2 = a2.add_run("Shivesh Kumar — 25BCE1067"); r2.font.size = Pt(14); r2.bold = True; r2.font.color.rgb = NAVY
+    d.add_paragraph()
 
     # 1
     h("1. Problem Statement, Objectives, and Scope", 1)
@@ -267,6 +274,7 @@ def build_pptx():
     textbox(s, 0.8, 2.2, 11.7, 1.6, "Blockchain-Based Carbon Credit Trading System", 40, PWHITE, bold=True, align=PP_ALIGN.CENTER)
     textbox(s, 0.8, 3.9, 11.7, 0.7, "Digital Assignment 1 (DA1)  •  Blockchain Technology", 20, PRGB(0xcf,0xe3,0xdf), align=PP_ALIGN.CENTER)
     textbox(s, 0.8, 4.7, 11.7, 0.7, "SDG 13 — Climate Action   |   Supporting SDG 7 & SDG 12", 18, PTEAL, bold=True, align=PP_ALIGN.CENTER)
+    textbox(s, 0.8, 5.9, 11.7, 0.5, "Avi Dhandhania (25BCE1207)   •   Shivesh Kumar (25BCE1067)", 17, PWHITE, bold=True, align=PP_ALIGN.CENTER)
 
     # Agenda
     bullets_slide("Agenda", [

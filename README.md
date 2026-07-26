@@ -2,6 +2,7 @@
 
 **Digital Assignment 1 (DA1) — Blockchain Technology**
 **SDG 13 — Climate Action** (supporting SDG 7 & SDG 12)
+**By:** Avi Dhandhania (25BCE1207) · Shivesh Kumar (25BCE1067)
 
 A public-Ethereum system that tokenises carbon credits as unique, non-duplicable assets and enforces their full lifecycle — mint → trade → **retire (burn)** — on an immutable, publicly auditable ledger. It structurally eliminates the double-counting, opacity, and fraud that plague today's carbon markets.
 
