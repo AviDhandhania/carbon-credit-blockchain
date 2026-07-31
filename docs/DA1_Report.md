@@ -1,173 +1,243 @@
-# DA1 — Blockchain-Based Carbon Credit Trading System
+# DA1: Blockchain Based Carbon Credit Trading System
 
 **Course:** Blockchain Technology · **Assessment:** Digital Assignment 1 (DA1)
-**SDG Alignment:** SDG 13 — Climate Action (supporting SDG 7, SDG 12)
-**Submitted by:** Avi Dhandhania (25BCE1207) · Shivesh Kumar (25BCE1067)
+**SDG:** SDG 13, Climate Action (also supports SDG 7 and SDG 12)
+**Submitted by:** Avi Dhandhania (25BCE1207), Shivesh Kumar (25BCE1067)
 
 ---
 
-## 1. Problem Statement, Objectives, and Scope
+## 1. Problem Statement, Objectives and Scope
 
-### 1.1 Problem Statement
-Carbon credits are a market-based instrument used to fight climate change: one credit represents the right to emit one tonne of CO₂, and organisations that cut their emissions can sell surplus credits to those that exceed their limits. In principle this rewards decarbonisation. In practice the current carbon-credit market is undermined by four structural failures:
+### 1.1 The problem
 
-1. **Double-counting** — the same credit is sold to multiple buyers because national and private registries are siloed and do not reconcile with one another.
-2. **Opacity** — buyers, regulators, and the public cannot independently verify that a credit is genuine or that the underlying green project (e.g. reforestation) actually delivered the promised offset.
-3. **Fraud & "phantom credits"** — credits are issued for projects that never existed or that overstate their impact, with no tamper-proof record to expose them.
-4. **Slow, costly verification** — auditing and settlement rely on manual, paper-based intermediaries, taking weeks to months and inflating transaction costs.
+One carbon credit is permission to release one tonne of CO2. A company that pollutes less than its allowance can sell the credits it did not use. A company that pollutes more has to buy them. On paper this pays companies to cut emissions, and it should work.
 
-These failures erode trust in the very mechanism meant to accelerate climate action, allowing continued emissions to be "offset" by credits that deliver no real environmental benefit.
+In practice the market has a trust problem. The same four issues keep coming up.
+
+**The same credit gets counted twice.** Registries are separate databases run by separate bodies, and they do not talk to each other. A credit sold in one registry can be sold again in another, and nobody notices.
+
+**Buyers cannot check what they bought.** If a company buys 10,000 credits from a tree planting project, it has no way to confirm that the trees exist. It has to trust a PDF.
+
+**Some credits are for projects that never happened.** These are called phantom credits. Journalists have found cases where a large share of a registry's credits did not represent any real reduction. Because the records sit in private databases, this only comes out years later, if at all.
+
+**Checking is slow and expensive.** Approval and settlement still run on manual audits and paperwork. It can take months, and the fees come out of money that was supposed to go into climate projects.
+
+The result is that a system built to reduce emissions ends up letting companies claim reductions that never happened.
 
 ### 1.2 Objectives
-- **O1.** Tokenise carbon credits as unique, non-duplicable digital assets on a public blockchain so that each credit has a single, traceable identity.
-- **O2.** Automate the issuance, transfer, and permanent **retirement (burning)** of credits through smart contracts, eliminating double-counting by design.
-- **O3.** Provide a transparent, immutable, publicly auditable ledger of every credit's full lifecycle from minting to retirement.
-- **O4.** Reduce dependence on intermediaries, lowering verification time and transaction cost.
-- **O5.** Enforce role-based authorisation (project developers, accredited verifiers, buyers, regulators) so only legitimate actors can issue or approve credits.
+
+**O1.** Turn each carbon credit into a token on a public blockchain so it has one identity and cannot be copied.
+
+**O2.** Handle issuing, selling and retiring credits in smart contract code, so double counting is blocked by the rules of the system and not by someone remembering to check.
+
+**O3.** Keep the whole history of every credit on a ledger that anyone can read and nobody can edit.
+
+**O4.** Cut out middlemen so verification is faster and cheaper.
+
+**O5.** Give the four kinds of users (project developer, verifier, buyer, regulator) separate on chain roles, so only the right person can do each action.
+
+**O6.** Make verifiers pay for bad approvals. A verifier has to lock money before signing off on a project, and loses it if the project is later shown to be fake. This is the part we have not seen in existing work, and it is described in Section 4.4.
 
 ### 1.3 Scope
-**In scope:** design of a decentralised application (DApp) on the Ethereum ecosystem; ERC-20 token contract for fungible credits; a marketplace contract for listing/buying; a retirement contract for permanent burning; role-based access control; IPFS storage for supporting project documents; and a public verification dashboard.
 
-**Out of scope (DA1):** live integration with government registries, legally binding settlement, real-money on-ramps, and machine-learning-based project-impact estimation. DA1 covers the *problem framing, literature, blockchain justification, architecture, and project plan* — not implementation.
+**What DA1 covers:** the design of a decentralised app (DApp) on Ethereum. This includes an ERC-20 token for credits, a marketplace contract for listing and buying, a retirement contract that burns credits and issues a certificate, a staking and challenge contract for verifiers, role based access control, IPFS for project documents, and a dashboard where anyone can look up a credit.
 
-### 1.4 SDG Alignment
-| SDG | How the project contributes |
-|-----|-----------------------------|
-| **SDG 13 – Climate Action** (primary) | Restores integrity to carbon markets so offsets fund *real* emission reductions. |
-| **SDG 7 – Affordable & Clean Energy** | Credits generated by renewable-energy projects gain a trustworthy, tradable value. |
-| **SDG 12 – Responsible Consumption & Production** | Transparent tracking discourages greenwashing and rewards genuinely sustainable producers. |
+**What DA1 does not cover:** connecting to government registries, legally binding settlement, buying credits with real money, and any machine learning estimate of how much CO2 a project actually saved. DA1 is the problem study, the literature review, the justification for using blockchain, the architecture and the plan. Writing the contracts comes later.
+
+### 1.4 How this maps to the SDGs
+
+| SDG | What the project does for it |
+|-----|------------------------------|
+| SDG 13, Climate Action (main) | Makes offsets trustworthy, so money spent on credits funds real emission cuts. |
+| SDG 7, Affordable and Clean Energy | Solar and wind projects can sell credits that buyers actually believe in. |
+| SDG 12, Responsible Consumption and Production | Public records make greenwashing easy to spot. |
 
 ---
 
 ## 2. Literature Survey and Research Gap
 
-### 2.1 Survey of Existing Work
-| # | Work / System | Contribution | Limitation |
-|---|---------------|--------------|------------|
-| 1 | **Toucan Protocol** (Base Carbon Tonne) | Bridges off-chain credits onto Ethereum as tokens; introduced on-chain retirement. | Relies on trust in the off-chain bridge; criticised for tokenising low-quality legacy credits. |
-| 2 | **KlimaDAO** | Uses tokenised credits as a treasury asset to raise the carbon price. | Financial/speculative focus rather than verification integrity. |
-| 3 | **IBM & Energy Web – carbon tracking pilots** | Enterprise (permissioned) blockchain for corporate emissions tracking. | Not publicly auditable; limited to consortium members. |
-| 4 | **Verra / Gold Standard registries (conventional)** | Established methodologies and human verification of projects. | Centralised, siloed databases; double-counting and slow settlement persist. |
-| 5 | **Academic: Blockchain for carbon trading (survey papers, 2019–2023)** | Propose smart-contract-based trading and prove feasibility. | Mostly conceptual; few address the *complete mint→trade→retire* lifecycle with role control and off-chain proof anchoring. |
-| 6 | **Franke et al. / EU ETS studies** | Model emission-trading schemes economically. | Do not tackle the technical trust layer that blockchain provides. |
+### 2.1 What already exists
 
-### 2.2 Identified Research Gap
-Across the literature, three gaps recur:
-- **G1 — Fragmented lifecycle handling.** Most solutions tokenise *or* trade *or* retire credits, but few model the *entire* lifecycle with enforced state transitions (a credit cannot be sold after retirement).
-- **G2 — Weak off-chain–on-chain trust anchoring.** Bridged credits inherit the flaws of the legacy registries they come from; there is limited work on binding verifier attestations and project evidence (via IPFS hashes) immutably to each token.
-- **G3 — Missing role-based governance on a public chain.** Public solutions maximise transparency but rarely combine it with strict on-chain role control (verifier vs. developer vs. buyer vs. regulator).
+| # | Work | What it did well | Where it falls short |
+|---|------|------------------|----------------------|
+| 1 | Toucan Protocol (Base Carbon Tonne) | Moved real credits onto Ethereum as tokens and added on chain retirement. | Everything depends on trusting the bridge. It was criticised for bringing old, low quality credits on chain, which put good tokens and junk tokens in the same pool. |
+| 2 | KlimaDAO | Used tokenised credits as a treasury asset to push the carbon price up. | The goal is financial, not honest accounting. It does not check whether a credit is real. |
+| 3 | IBM and Energy Web pilots | Enterprise blockchains for tracking company emissions. | Permissioned, so only members can read the ledger. The public and regulators are locked out, which is the group that most needs to check. |
+| 4 | Verra and Gold Standard registries | Well developed methods for measuring a project, plus human auditors. | Central databases that do not reconcile with each other. Double counting and slow settlement are still normal. |
+| 5 | Academic surveys on blockchain carbon trading, 2019 to 2023 | Showed that smart contract trading is workable and modelled parts of it. | Mostly stay at concept level. Few cover the full mint, trade and retire path with role control and evidence anchoring together. |
+| 6 | EU ETS and other economic models | Model how an emissions trading scheme behaves as a market. | Assume the records are correct. They do not deal with the trust layer at all. |
 
-**This project addresses G1–G3** by designing a single public-Ethereum system that (a) enforces the full credit lifecycle in smart-contract logic, (b) anchors verifier attestations and IPFS document hashes to every token, and (c) layers role-based access control over a fully transparent ledger.
+### 2.2 The gaps we found
+
+**G1. The lifecycle is handled in pieces.** Most systems tokenise credits, or trade them, or retire them. Few enforce the order, so the rule "a retired credit can never be sold again" is often a policy rather than something the code refuses to do.
+
+**G2. Off chain evidence is loosely attached.** When a credit is bridged from an old registry it carries the same weaknesses it had there. The verifier's signature and the project documents are usually kept somewhere else, so a token on its own tells you very little about where it came from.
+
+**G3. Public chains have transparency but weak governance.** Public systems let anyone read the ledger, but they rarely combine that with strict on chain roles for developer, verifier, buyer and regulator.
+
+**G4. Nothing happens to a verifier who approves a fake project.** This gap is the important one. Every design above assumes the data entering the chain is honest. If a verifier signs off on a project that does not exist, the blockchain records that lie perfectly and forever. The verifier faces no on chain consequence, and buyers who paid for those credits have no way to get anything back. Papers name this the "garbage in, garbage out" problem and then move on.
+
+**What we do about them.** We design one public Ethereum system that keeps the lifecycle order in contract code (G1), stores the verifier's signature and an IPFS hash of the evidence with every batch of credits (G2), and puts role based access control on top of a public ledger (G3). For G4 we add a stake and challenge mechanism, plus batch tracing and a non transferable retirement certificate. Section 4.4 explains these.
 
 ---
 
-## 3. Blockchain Suitability — Why Ethereum (and not Hyperledger)?
+## 3. Is Blockchain the Right Choice Here?
 
-### 3.1 Is blockchain even needed? (Justification)
-A quick decision test — blockchain is justified only when: multiple non-trusting parties share data, no single trusted authority should control it, an immutable audit trail is required, and disintermediation adds value. Carbon trading satisfies **all four**: polluters, project developers, verifiers, regulators, and the public do not fully trust each other; the record must be tamper-proof; and removing slow intermediaries is a core objective. A plain database controlled by one registry is exactly the *status quo that failed*.
+### 3.1 Does this need a blockchain at all?
 
-### 3.2 Ethereum vs. Hyperledger Fabric
+It is worth asking, because plenty of projects use a blockchain where a database would do. The usual test is four questions. Do several parties who do not trust each other need to share the same data? Should no single organisation own that data? Is a record that cannot be edited necessary? Does removing middlemen help?
+
+Carbon trading answers yes to all four. Polluters, project developers, verifiers, regulators and the public all have different interests and do not fully trust one another. The record has to survive attempts to edit it, because the whole point is to prove what happened. And cutting out slow intermediaries is one of our objectives.
+
+There is also a simpler argument. A single registry with one owner and one database is exactly what the market has now, and that is the thing that failed.
+
+### 3.2 Ethereum or Hyperledger Fabric?
+
 | Criterion | Ethereum (public) | Hyperledger Fabric (permissioned) |
 |-----------|-------------------|-----------------------------------|
-| Access | Permissionless — anyone can read/verify | Permissioned — invited members only |
-| Public auditability | **Full** (essential here) | Limited to consortium |
-| Native tokenisation | **First-class** (ERC-20 / ERC-721) | Requires custom chaincode |
-| Trust model | Trustless, decentralised | Trust among known members |
-| Cost | Gas fees (mitigable via L2) | No gas, but infrastructure cost |
-| Throughput | Lower on L1, high on L2 | High |
+| Who can join | Anyone can read and verify | Only invited members |
+| Public audit | Full, which is what we need | Only within the consortium |
+| Tokens | Built in through ERC-20 and ERC-721 | Needs custom chaincode |
+| Trust model | Trustless | Members trust each other |
+| Cost | Gas fees, reducible with Layer 2 | No gas, but servers to run |
+| Speed | Slower on L1, fast on L2 | Fast |
 
-### 3.3 Decision: Ethereum
-Carbon credits must be verifiable by the **general public and regulators**, not just a closed consortium — this rules out a permissioned ledger and makes public **Ethereum** the correct fit:
-- **Public verifiability** matches the core goal of exposing fraud and double-counting to anyone.
-- **Mature token standards (ERC-20/721)** map directly onto "one credit = one non-duplicable token".
-- **Largest smart-contract ecosystem** (Solidity, OpenZeppelin, MetaMask, testnets) shortens development and hardens security.
-- **Layer-2 scaling (Polygon, Arbitrum)** neutralises the gas-cost objection for production.
+### 3.3 We chose public Ethereum
 
-> Hyperledger would be preferable only if credits were traded privately among a *fixed, known* set of corporations — which contradicts the public-accountability objective of this project.
+The deciding factor is who needs to check the records. Credits have to be verifiable by regulators, journalists, NGOs and ordinary people, not just by the companies in a consortium. That rules out a permissioned ledger straight away.
+
+Three other reasons back it up. ERC-20 and ERC-721 already match what we need, where one credit is one token that cannot be duplicated. The tooling around Ethereum is the most mature, so Solidity, OpenZeppelin, Hardhat, MetaMask and free testnets are all available and well tested, which matters for security. And Layer 2 networks like Polygon and Arbitrum bring gas costs down far enough that the cost argument stops being a real objection.
+
+Hyperledger would be the better pick if credits were traded quietly among a fixed set of known companies. That is the opposite of what we want.
 
 ---
 
-## 4. System Architecture, Workflow, and Design
+## 4. Architecture, Workflow and Design
 
-### 4.1 System Architecture
-A four-layer architecture (see `diagrams/architecture.png`):
+### 4.1 System architecture
 
-- **Presentation Layer** — React web DApp, MetaMask wallet integration, and a verifier/regulator dashboard.
-- **Application / API Layer** — Node.js REST API, authentication & role manager, and an oracle adapter for off-chain data.
-- **Blockchain Layer (Ethereum)** — three smart contracts: `CreditToken` (ERC-20), `Marketplace`, and `Retirement/Burn`.
-- **Storage Layer** — the on-chain ledger for transaction history, **IPFS** for bulky project documents (only the hash is stored on-chain), and an off-chain database caching metadata for fast reads.
+The system has four layers. See `diagrams/architecture.png`.
+
+**Presentation layer.** A React web app that talks to the chain through Web3.js, MetaMask for signing transactions, and a dashboard for verifiers and regulators.
+
+**Application layer.** A Node.js REST API, a role manager that maps a wallet address to a role, and an adapter that pulls in off chain data such as satellite or sensor readings for a project.
+
+**Blockchain layer (Ethereum).** Four contracts. `CreditToken` is the ERC-20 token and also keeps a record for each batch. `Marketplace` handles listing and buying. `RetireAndCertify` burns credits and issues the certificate. `VerifierStake` holds verifier deposits and runs the challenge process.
+
+**Storage layer.** The chain itself for transaction history, IPFS for large project documents where only the hash goes on chain, and an ordinary database that caches metadata so the dashboard loads quickly. The cache holds nothing that matters; if it is lost it can be rebuilt from the chain.
 
 ```mermaid
 flowchart TB
   subgraph P[Presentation]
-    A[Web DApp React+Web3] --- B[MetaMask] --- C[Verifier Dashboard]
+    A[Web DApp React and Web3] --- B[MetaMask] --- C[Verifier Dashboard]
   end
-  subgraph AP[Application/API]
-    D[REST API Node.js] --- E[Auth & Role Manager] --- F[Oracle Adapter]
+  subgraph AP[Application and API]
+    D[REST API Node.js] --- E[Auth and Role Manager] --- F[Oracle Adapter]
   end
-  subgraph BC[Blockchain - Ethereum]
-    G[CreditToken ERC-20] --- H[Marketplace Contract] --- I[Retirement/Burn]
+  subgraph BC[Blockchain, Ethereum]
+    G[CreditToken ERC-20 plus batches] --- H[Marketplace] --- I[RetireAndCertify] --- J[VerifierStake]
   end
   subgraph S[Storage]
-    J[On-chain Ledger] --- K[IPFS Docs] --- L[Off-chain DB Cache]
+    K[On-chain Ledger] --- L[IPFS Docs] --- M[Off-chain DB Cache]
   end
   P --> AP --> BC --> S
 ```
 
-### 4.2 Workflow — Carbon Credit Lifecycle
-(see `diagrams/workflow.png`)
-1. A green project (reforestation, solar, etc.) is **registered** with supporting evidence.
-2. An accredited **verifier approves** the project; the attestation + IPFS document hash are anchored on-chain.
-3. Credits are **minted** as tokens (1 token = 1 tonne CO₂ offset).
-4. A polluting company **buys** credits via the marketplace contract.
-5. To offset its emissions the company **retires (burns)** the credits — permanently removing them from circulation.
-6. The full history remains a **public audit trail**; a retired credit can never be resold, structurally eliminating double-counting.
+### 4.2 The life of a credit
 
-### 4.3 Sequence — Buy & Retire
-(see `diagrams/sequence.png`) The buyer connects a wallet and selects a credit → DApp calls `buyCredit()` → the marketplace contract transfers tokens and records the transaction on Ethereum → confirmation returns → the buyer calls `retire()` → tokens are burned permanently → an audit-proof receipt (tx hash) is returned.
+See `diagrams/workflow.png`.
 
-### 4.4 Key Design Decisions
-- **ERC-20 for fungible credits**; optionally **ERC-721** to bind a unique project identity + metadata to each batch.
-- **OpenZeppelin AccessControl** for the four roles (developer, verifier, buyer, regulator).
-- **IPFS content-addressing** keeps large files off-chain while their hash guarantees integrity on-chain.
-- **Retirement = irreversible burn**, enforced in contract logic so double-spend is impossible.
+1. A developer registers a green project, such as reforestation or rooftop solar, and uploads the supporting documents to IPFS.
+2. A verifier locks a deposit and approves the project. The approval, the verifier's address and the IPFS hash of the evidence all go on chain.
+3. Credits are minted as a batch. One token equals one tonne of CO2. The batch keeps a link back to the project and the verifier who approved it.
+4. A company buys credits through the marketplace contract.
+5. To claim the offset, the company retires the credits, which burns them.
+6. The retirement contract issues a certificate to the buyer's address. The certificate cannot be transferred or sold.
+7. All of this stays readable by anyone. During the challenge window the batch can still be disputed, and after that it is settled.
+
+Because retirement is a burn, a retired credit cannot be sold again. That is not a rule someone has to enforce; there is simply nothing left to sell.
+
+### 4.3 Sequence for buying and retiring
+
+See `diagrams/sequence.png`. The buyer connects a wallet and picks a listing. The DApp calls `buyCredit(batchId, qty)`. The marketplace contract moves the tokens and the transaction is recorded on Ethereum. Once it is confirmed, the buyer calls `retire(batchId, qty)`. The tokens are burned and the contract issues the certificate in the same transaction, so the burn and the proof of the burn cannot come apart. The buyer ends up with a transaction hash and a certificate that is anchored to their address.
+
+### 4.4 What is new in our design
+
+Everything in Section 4.1 to 4.3 is engineering that others have done in some form. This section is the part we have not found in the systems we surveyed. See `diagrams/novelty.png`.
+
+**Verifiers put money at risk.** Right now a verifier signs a report and walks away. In our design a verifier must lock a deposit in `VerifierStake` before approving anything, and the deposit stays locked through a challenge window of about 90 days per batch. Anyone can challenge a batch during that window by posting a smaller bond and an IPFS link to their evidence, such as satellite images showing bare land where a forest was claimed. An address holding the regulator role rules on the challenge. If the challenge succeeds, the verifier's stake is slashed. Part goes to the challenger, which pays people to look for fraud, and part goes into a compensation pool for the buyers of that batch. If the challenge fails, the challenger loses their bond, which stops people filing junk challenges. A verifier whose stake falls below the minimum loses the ability to approve anything until they top it up.
+
+This changes what the blockchain is doing. In the systems we reviewed the chain is a very good filing cabinet: it records whatever it is told, including lies. Here the chain also holds the incentive. Approving a fake project stops being free.
+
+**Every credit can be traced back and flagged.** Each mint creates a batch that stores the project ID, the verifier who approved it and the IPFS hash of the evidence. So a token is never anonymous. If a project is later proven fake, the contract can mark every batch that came from it, and the dashboard shows a warning on each of those credits and on every wallet still holding them. Compare this with a token pool where good and bad credits are mixed together and one bad project quietly damages the value of the whole pool. Being able to name the affected credits is what makes compensation possible at all.
+
+**The retirement certificate cannot be traded.** When credits are burned, the contract mints an ERC-721 token to the buyer with transfer disabled, which is a soulbound token. It records how many tonnes were retired, which batch they came from, the date and who claimed the offset. This matters for two reasons. A company can point an auditor or a customer at a public certificate instead of a spreadsheet it wrote itself. And because the certificate cannot move, the same retirement cannot be resold as proof to a second company. Today a burn is only a hole in the supply and nothing says who the hole belongs to, so two companies can both point at it. Here the claim has an owner.
+
+**Together these three close G4.** Evidence is bound to the credit, someone loses money if the evidence was false, anyone can start that process, and the offset claim at the end is public and cannot be reused. The chain stops only proving that a record exists and starts giving people a reason to file honest records in the first place.
+
+**What we are not claiming.** Staking does not make fraud impossible. A verifier who profits more than the stake is worth may still take the risk, so the minimum stake has to scale with the size of the batch, and choosing that number properly needs work we have not done. Slashing also depends on a regulator role judging challenges, which is one trusted point in an otherwise trustless design. We think that is the right trade for now, because a fully automated ruling would need an oracle that can decide whether a forest exists, and that does not exist yet. A panel of regulator addresses with majority voting is the obvious next step.
+
+### 4.5 Other design decisions
+
+**ERC-20 for the credits themselves,** because credits of the same batch are interchangeable and buyers want to buy 500 tonnes rather than 500 individual items. The batch record gives us the project identity without making every tonne a separate NFT.
+
+**ERC-721 with transfers disabled for the certificate,** since a certificate is genuinely unique and should never move.
+
+**OpenZeppelin AccessControl for the four roles.** It is audited and widely used, and role management is exactly the kind of code we should not write ourselves.
+
+**IPFS for documents.** A project report can run to hundreds of pages, which is far too expensive to store on chain. IPFS addresses content by its hash, so storing the hash on chain is enough to prove that a document has not been changed.
+
+**Retirement is an irreversible burn,** enforced in the contract, so double spending a retired credit is not possible.
 
 ---
 
-## 5. Project Planning — Timeline, Milestones, Feasibility
+## 5. Project Planning
 
-### 5.1 Timeline & Milestones (see `diagrams/gantt.png`)
-| Phase | Weeks | Milestone / Deliverable |
-|-------|-------|--------------------------|
-| Requirement analysis & literature survey | W0–W2 | Finalised problem statement & survey (**DA1**) |
-| System design & architecture | W1–W3 | Architecture + design diagrams (**DA1**) |
-| Smart-contract development (Solidity) | W3–W6 | Deployed `CreditToken`, `Marketplace`, `Retirement` contracts |
-| Frontend DApp + Web3 integration | W4–W7 | Working DApp connected to MetaMask |
-| Oracle / IPFS integration | W6–W8 | Off-chain evidence anchored on-chain |
-| Testing on testnet (Sepolia) | W7–W9 | End-to-end lifecycle demo on testnet |
-| Security audit & gas optimisation | W9–W10 | Audit report, optimised contracts |
-| Documentation & final demo | W9–W11 | Final report + presentation |
+### 5.1 Timeline and milestones
 
-### 5.2 Feasibility Analysis
-- **Technical feasibility — High.** All components are mature and open-source: Solidity + OpenZeppelin, Hardhat/Truffle, React + Web3.js, MetaMask, Sepolia testnet, and IPFS. No unproven technology is required.
-- **Economic feasibility — High.** Development uses free testnets and open-source tooling (zero licensing cost). Production gas costs are mitigated by deploying on a **Layer-2** (Polygon/Arbitrum).
-- **Operational feasibility — Medium.** Adoption requires accredited verifiers and regulator buy-in; the system is designed to *complement* existing registries rather than replace them overnight.
-- **Schedule feasibility — High.** The 11-week plan fits a single semester with clear, incremental milestones.
+See `diagrams/gantt.png`.
 
-### 5.3 Risks & Mitigation
-| Risk | Mitigation |
-|------|------------|
-| Off-chain data can still be falsified before minting ("garbage in") | Require multiple independent verifier attestations; anchor evidence via IPFS hash. |
-| High L1 gas fees | Deploy on Layer-2; batch operations. |
-| Smart-contract vulnerabilities | Use audited OpenZeppelin libraries; run static analysis (Slither) + testnet audit. |
-| Regulatory acceptance | Position as an interoperable transparency layer over existing registries. |
+| Phase | Weeks | Deliverable |
+|-------|-------|-------------|
+| Requirement study and literature survey | W0 to W2 | Problem statement and survey (DA1) |
+| System design and architecture | W1 to W3 | Architecture and design diagrams (DA1) |
+| Smart contract development in Solidity | W3 to W6 | `CreditToken` and `Marketplace` deployed |
+| Frontend DApp with Web3 integration | W4 to W7 | Working DApp connected to MetaMask |
+| Staking, challenge and certificate module | W5 to W8 | `VerifierStake` and `RetireAndCertify` deployed |
+| Oracle and IPFS integration | W6 to W8 | Evidence hashes anchored on chain |
+| Testing on the Sepolia testnet | W7 to W9 | Full lifecycle demo, including a slashing case |
+| Security audit and gas optimisation | W9 to W10 | Audit notes and optimised contracts |
+| Documentation and final demo | W9 to W11 | Final report and presentation |
+
+### 5.2 Feasibility
+
+**Technical: high.** Every piece already exists and is open source. Solidity with OpenZeppelin, Hardhat, React with Web3.js, MetaMask, the Sepolia testnet and IPFS. Nothing here is unproven. The staking contract is the most involved part, but escrow with slashing is a well known pattern in staking and prediction market contracts, so we have working examples to follow.
+
+**Economic: high.** Development costs nothing beyond time, since testnets and all the tooling are free. For a production deployment the gas cost is the real number, and moving to Polygon or Arbitrum brings it down to cents per transaction.
+
+**Operational: medium.** This is the weak spot. The design needs accredited verifiers who are willing to put up a deposit, and a regulator who will rule on challenges. Both are people problems, not code problems. Our answer is to position the system as a transparency layer that sits alongside existing registries rather than a replacement, so it can start small with a few verifiers who want to prove their credits are better than average.
+
+**Schedule: high.** Eleven weeks fits one semester, and the phases overlap in a way that leaves room if the contract work runs long.
+
+### 5.3 Risks
+
+| Risk | What we do about it |
+|------|---------------------|
+| Off chain data is falsified before minting | This is the risk the staking design targets. Require more than one independent verifier attestation, anchor evidence by IPFS hash, and slash the stake if a challenge succeeds. |
+| Verifier profits more than the stake is worth | Scale the minimum stake with batch size, and keep the deposit locked through the challenge window rather than releasing it at approval. |
+| Nobody bothers to file challenges | Pay the challenger part of the slashed stake, so looking for fraud is worth someone's time. |
+| High gas fees on L1 | Deploy on Layer 2 and batch operations where possible. |
+| Bugs in the contracts | Use audited OpenZeppelin libraries, run Slither for static analysis, and test on Sepolia before anything else. The money held in the staking contract makes this the highest priority audit target. |
+| Regulators are slow to accept it | Present it as an interoperable transparency layer over existing registries, not a competitor. |
 
 ---
 
 ## References (indicative)
-1. Toucan Protocol — *Bridging carbon credits on-chain* (documentation).
-2. KlimaDAO — *Tokenised carbon as a reserve asset* (whitepaper).
-3. IBM & Energy Web Foundation — *Enterprise carbon-tracking pilots*.
-4. Verra & Gold Standard — *Carbon credit verification methodologies*.
-5. Survey papers on *Blockchain for carbon emission trading*, IEEE/Elsevier, 2019–2023.
-6. OpenZeppelin — *ERC-20 and AccessControl contract libraries*.
+
+1. Toucan Protocol, documentation on bridging carbon credits on chain.
+2. KlimaDAO whitepaper, tokenised carbon as a reserve asset.
+3. IBM and Energy Web Foundation, enterprise carbon tracking pilots.
+4. Verra and Gold Standard, carbon credit verification methodologies.
+5. Survey papers on blockchain for carbon emission trading, IEEE and Elsevier, 2019 to 2023.
+6. OpenZeppelin, ERC-20, ERC-721 and AccessControl contract libraries.
+7. EIP-5192, minimal soulbound (non transferable) token standard.
