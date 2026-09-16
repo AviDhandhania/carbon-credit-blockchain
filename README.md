@@ -1,14 +1,22 @@
 # Blockchain Based Carbon Credit Trading System
 
-**Digital Assignment 1 (DA1), Blockchain Technology**
+**Blockchain Technology — Digital Assignment 1 (design) + Digital Assignment 2 (working 50% implementation)**
 **SDG 13, Climate Action** (also supports SDG 7 and SDG 12)
 **By:** Avi Dhandhania (25BCE1207), Shivesh Kumar (25BCE1067)
 
-A design for a public Ethereum system that turns carbon credits into tokens and keeps their whole life on a ledger anyone can read: mint, trade, then **retire by burning**. That much removes double counting.
+A public Ethereum system that turns carbon credits into tokens and keeps their whole life on a ledger anyone can read: mint, trade, then **retire by burning**. That much removes double counting.
 
-The part we have not found elsewhere is what happens when the data going in is a lie. Verifiers have to **lock a deposit** before approving a project and lose it if the project is later shown to be fake, anyone can challenge a batch and get paid out of the slashed stake, and burning credits mints a **soulbound certificate** so an offset claim has a public owner and cannot be resold as proof. See Section 4.4 of the report.
+The part we have not found elsewhere is what happens when the data going in is a lie. Verifiers have to **lock a deposit** before approving a project and lose it if the project is later shown to be fake, anyone can challenge a batch and get paid out of the slashed stake, and burning credits mints a **soulbound certificate** so an offset claim has a public owner and cannot be resold as proof. See Section 4.4 of the DA1 report and Section 3.2 of the DA2 report.
+
+## Status
+
+| | |
+|---|---|
+| **DA1 — design** | Complete: report, presentation, diagrams |
+| **DA2 — implementation** | 4 smart contracts, test suite, React frontend, deploy script |
 
 ## DA1 Deliverables
+
 | Deliverable | Location |
 |-------------|----------|
 | Full report (Word) | [`docs/DA1_Report.docx`](docs/DA1_Report.docx) |
@@ -16,9 +24,167 @@ The part we have not found elsewhere is what happens when the data going in is a
 | Presentation (PowerPoint) | [`presentation/DA1_Presentation.pptx`](presentation/DA1_Presentation.pptx) |
 | Design diagrams (PNG) | [`diagrams/`](diagrams/) |
 
-The report and slides cover the problem statement, objectives and scope against SDG 13, the literature survey and research gap, why Ethereum rather than Hyperledger, the architecture and workflow, what is new in our design, and the project plan with feasibility and risks.
+## DA2 Deliverables
+
+| Deliverable | Location |
+|-------------|----------|
+| DA2 report (Markdown) | [`docs/DA2_Report.md`](docs/DA2_Report.md) |
+| Smart contracts (Solidity 0.8.20) | [`contracts/`](contracts/) |
+| Test suite (44 passing) | [`test/CarbonCredit.test.js`](test/CarbonCredit.test.js) |
+| Deploy script | [`scripts/deploy.js`](scripts/deploy.js) |
+| React frontend | [`frontend/`](frontend/) |
+
+---
+
+# Running the project (DA2)
+
+## 1. Prerequisites
+
+- Node.js 18, 20 or 22 (this machine runs 24 — Hardhat only prints an unsupported-version warning, everything still works)
+- MetaMask (or any wallet that injects `window.ethereum`)
+- Python 3 only if you want to rebuild the DA1 report/diagrams
+
+```bash
+npm install
+```
+
+## 2. Compile and test
+
+```bash
+npx hardhat compile                  # compile the contracts
+npx hardhat test                     # 44 tests, all passing
+npx hardhat coverage                 # optional coverage report
+REPORT_GAS=true npx hardhat test     # optional gas report
+```
+
+## 3. Run the local chain and deploy
+
+Three terminals. **The node must stay open** — the chain lives in memory, so closing it wipes all deployed contracts and data.
+
+```bash
+# Terminal 1 — local chain on 127.0.0.1:8545 (chain ID 31337)
+npm run node
+
+# Terminal 2 — deploy the 4 contracts and grant roles
+npm run deploy:local
+
+# Terminal 3 — frontend at http://localhost:3000
+npm run frontend
+```
+
+On a fresh chain the deploy script always produces these addresses:
+
+| Contract | Address |
+|----------|---------|
+| CreditToken | `0x5FbDB2315678afecb367f032d93F642f64180aa3` |
+| Marketplace | `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512` |
+| RetireAndCertify | `0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0` |
+| VerifierStake | `0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9` |
+
+These are already filled into [`frontend/src/utils/contracts.js`](frontend/src/utils/contracts.js). They are derived from the deployer's nonce, so if you deploy a second time on the **same** running node the addresses shift (nonces 5–8 on the second run) and `contracts.js` must be updated to match.
+
+## 4. Connect MetaMask
+
+1. **Add the network:** RPC URL `http://127.0.0.1:8545`, Chain ID `31337`, symbol `ETH`. MetaMask will warn that chain 31337 is registered as "GoChain Testnet" in its public list — ignore that, your local node is what you want. The app's orange "wrong network" banner also has a **Switch to Localhost (Hardhat)** button that adds it for you.
+2. **Import the funded account:** the deployer account, which is the only one holding roles. In MetaMask: *account menu → Add account or hardware wallet → Import a private key* and paste
+
+   ```
+   0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+   ```
+
+   → address `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` with ~10,000 ETH.
+   (These are Hardhat's well-known public test keys — never use them for real funds.)
+3. Open `http://localhost:3000`, click **Connect MetaMask**, approve, and pick that account.
+
+Optional second account, useful for testing a real purchase (one wallet sells, the other buys):
+
+```
+0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d   →  0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+```
+
+**Use the deployer account for everything except buying.** Minting, retiring and staking all check for a role, and the frontend has no role-grant screen — so a freshly imported account gets rejected with `AccessControlUnauthorizedAccount`. Buying needs no role, which is why the trading flow works with a second account:
+
+```bash
+npm run node                       # terminal 1
+npm run deploy:local               # terminal 2
+npm run frontend                   # terminal 3
+```
+
+## 5. Deployment to Sepolia (optional)
+
+```bash
+cp .env.example .env       # fill in SEPOLIA_RPC_URL, PRIVATE_KEY, ETHERSCAN_API_KEY
+npm run deploy:sepolia
+npm run verify:sepolia -- <address> <constructor args>
+```
+
+`COMPENSATION_POOL` (optional) sets the address that receives slashed stakes. It defaults to the deployer. Point it at an address you can actually withdraw from — not at another protocol contract.
+
+---
+
+# What is implemented
+
+## Smart contracts
+
+| Contract | Standard | Roles | Purpose |
+|----------|----------|-------|---------|
+| [`CreditToken.sol`](contracts/CreditToken.sol) | ERC-20 + burnable + AccessControl | `MINTER_ROLE`, `VERIFIER_ROLE` | Credits with per-batch tracking |
+| [`Marketplace.sol`](contracts/Marketplace.sol) | AccessControl + ReentrancyGuard | `BUYER_ROLE`, `MARKETPLACE_ADMIN_ROLE` | Listings, buying, price updates |
+| [`RetireAndCertify.sol`](contracts/RetireAndCertify.sol) | ERC-721 URI storage + AccessControl | `RETIRE_ROLE`, `REGULATOR_ROLE` | Burn credits, mint soulbound certificates |
+| [`VerifierStake.sol`](contracts/VerifierStake.sol) | AccessControl + ReentrancyGuard | `VERIFIER_ROLE`, `REGULATOR_ROLE`, `CHALLENGER_ROLE` | Stakes, challenges, slashing |
+
+**CreditToken** mints a `Batch` per project (`projectId`, `verifier`, `ipfsHash`, `amount`, `timestamp`, `isFlagged`) and keeps `batchBalances[batchId][holder]` in sync on every transfer, so a credit bought on the marketplace is still traceable to the batch it came from. `retireBatch` / `retireBatchFrom` burn credits, and an admin can `flagBatch` a fraudulent batch to block it from being traded or retired.
+
+**Marketplace** lets a holder list credits from a batch at a price in ETH. Buyers pay in one transaction; the contract transfers the credits and forwards the ETH to the seller, refunding any excess. Fully bought listings deactivate themselves.
+
+**RetireAndCertify** burns credits and mints an ERC-721 certificate of retirement in the same transaction. `_update`, `approve` and `setApprovalForAll` all revert, so the certificate is soulbound — it can never be transferred, approved or resold.
+
+**VerifierStake** is the novel part. A verifier must deposit ≥ 1 ETH before approving projects. Within 90 days of a batch being minted anyone can open a challenge by posting a 0.1 ETH bond plus an IPFS evidence hash. A regulator resolves it:
+
+- **Challenger wins** — half the verifier's stake is slashed: a quarter to the challenger (on top of their returned bond) and a quarter to the compensation pool. The batch is flagged.
+- **Verifier wins** — the stake is untouched and the challenger forfeits their bond to the compensation pool.
+
+While a challenge is open the verifier cannot withdraw their stake, so they cannot exit ahead of a ruling.
+
+## Frontend
+
+React 18 + Vite 5 + ethers v6, wallet via MetaMask. One `BrowserProvider`/signer is created in `App.jsx` and passed to every panel; contract addresses and human-readable ABIs live in [`frontend/src/utils/contracts.js`](frontend/src/utils/contracts.js).
+
+| Component | What it does |
+|-----------|--------------|
+| `WalletConnect.jsx` | Connect/disconnect, network badge, switch to Localhost or Sepolia |
+| `CreditTokenPanel.jsx` | Mint a batch, retire credits, list minted batches |
+| `MarketplacePanel.jsx` | Create/cancel listings, buy credits, view active and own listings |
+| `RetireCertifyPanel.jsx` | Retire credits and mint a soulbound certificate, view certificates |
+| `VerifierStakePanel.jsx` | Deposit/withdraw stake, open a challenge, resolve a challenge (regulator) |
+
+**A walkthrough that exercises everything** (all steps from the deployer account unless noted):
+
+1. 🪙 **Credit Token** → mint `PROJ-001` / `QmTestHash123` / `1000` → supply becomes 1000 CC, batch #1 appears.
+2. 🏪 **Marketplace** → create a listing for batch `1`, amount `100`, price `0.00001` ETH (two MetaMask confirmations: approve, then list).
+3. Optional: switch MetaMask to the second account, **Connect** it to the site from MetaMask's footer, and buy `50` CC — you pay `0.0005 ETH` and the batch balance moves to the buyer.
+4. 🪙 **Retire Credits** → batch `1`, amount `25` → supply drops to 975 CC.
+5. 📜 **Retire & Certify** → batch `1`, `25`, `ipfs://QmCert1` → certificate #1 is minted and cannot be transferred.
+6. 🛡️ **Deposit Stake** → `1` ETH.
+7. 🛡️ **Create Challenge** → batch `1`, evidence `QmEvidence1` (0.1 ETH bond).
+8. 🛡️ **Withdraw Stake** → `1` — this is *expected to revert* with `Active challenges exist`: the stake is locked while a challenge is open.
+9. 🛡️ **Resolve Challenge** → challenge `1`, *Challenger Wins* → verifier's stake drops to 0.5 ETH, the batch is flagged, and the challenger is paid their bond plus a quarter of the slash.
+
+Note that once a batch is flagged in step 9 it can no longer be listed or retired — that is the point of flagging, so resolve as *Verifier Wins* instead if you want to keep trading that batch.
+
+## Tests
+
+`npx hardhat test` — **44 passing**, covering all four contracts and the revert paths.
+
+| Suite | Tests | Covers |
+|-------|-------|--------|
+| CreditToken | 11 | Mint, retire, flag, roles, batch balances |
+| Marketplace | 12 | List, buy, cancel, price update, refunds, roles |
+| RetireAndCertify | 9 | Retire+certify, metadata, soulbound enforcement |
+| VerifierStake | 12 | Stake, withdraw, challenge, resolve, slashing payouts, stake lock |
 
 ## Diagrams
+
 | | |
 |---|---|
 | System architecture | ![arch](diagrams/architecture.png) |
@@ -27,7 +193,27 @@ The report and slides cover the problem statement, objectives and scope against 
 | Stake, challenge and slash (the new part) | ![new](diagrams/novelty.png) |
 | Project gantt | ![gantt](diagrams/gantt.png) |
 
-## Rebuilding the deliverables
+## Project structure
+
+```
+├── contracts/                     # Solidity 0.8.20 (viaIR, optimizer 200 runs)
+├── test/CarbonCredit.test.js      # 44 tests
+├── scripts/deploy.js              # deploys + grants roles
+├── frontend/                      # React + Vite frontend
+│   └── src/
+│       ├── components/            # one panel per module
+│       ├── utils/contracts.js     # addresses & ABIs
+│       └── App.jsx                # wallet connection
+├── diagrams/                      # generated PNGs + make_diagrams.py
+├── docs/                          # DA1 and DA2 reports
+├── presentation/                  # DA1 slides
+├── build_deliverables.py          # rebuilds the DA1 .docx/.pptx
+├── hardhat.config.js
+└── package.json
+```
+
+## Rebuilding the DA1 deliverables
+
 ```bash
 pip install python-pptx python-docx matplotlib pillow
 python diagrams/make_diagrams.py     # regenerate the diagram PNGs
@@ -36,5 +222,8 @@ python build_deliverables.py         # rebuild DA1_Report.docx and DA1_Presentat
 
 Note: the report text lives in two places, `docs/DA1_Report.md` and `build_deliverables.py`. Edit both or they drift.
 
-## Planned tech stack (later phases)
-Solidity with OpenZeppelin (ERC-20, ERC-721, AccessControl), Hardhat, React with Web3.js, MetaMask, IPFS, the Sepolia testnet, and a Layer 2 (Polygon or Arbitrum) for production.
+## Tech stack
+
+Implemented in DA2: Solidity 0.8.20 with OpenZeppelin 5 (ERC-20, ERC-721, AccessControl, ReentrancyGuard), Hardhat 2, Chai + ethers v6 for tests, React 18 + Vite 5 + ethers v6 for the frontend, MetaMask for signing, and the Hardhat local chain / Sepolia for deployment.
+
+Still planned: IPFS pinning (only content hashes are used today), a Layer 2 (Polygon or Arbitrum) for production, and the DA3 items listed in Section 4 of the DA2 report — multi-sig regulator, configurable challenge windows, MRV oracles and fiat on/off-ramps.
