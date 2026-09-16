@@ -39,13 +39,21 @@ function WalletConnect({
           {getNetworkName(chainId)}
         </span>
         {!isCorrectNetwork && (
-          <button 
-            className="btn btn-secondary" 
-            onClick={() => onSwitchNetwork(11155111)}
-            style={{ marginLeft: 'auto' }}
-          >
-            Switch to Sepolia
-          </button>
+          <>
+            <button
+              className="btn btn-secondary"
+              onClick={() => onSwitchNetwork(31337)}
+              style={{ marginLeft: 'auto' }}
+            >
+              Switch to Localhost (Hardhat)
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => onSwitchNetwork(11155111)}
+            >
+              Switch to Sepolia
+            </button>
+          </>
         )}
         <button className="btn btn-secondary" onClick={onDisconnect}>
           Disconnect

@@ -1,5 +1,8 @@
 async function main() {
   const [deployer] = await ethers.getSigners();
+  // Slashed funds sent here must be withdrawable, so it cannot be another
+  // protocol contract (e.g. RetireAndCertify has no withdraw function).
+  const compensationPool = process.env.COMPENSATION_POOL || deployer.address;
   console.log("Deploying contracts with account:", deployer.address);
   console.log("Account balance:", (await ethers.provider.getBalance(deployer.address)).toString());
 
@@ -26,7 +29,7 @@ async function main() {
 
   // Deploy VerifierStake
   const VerifierStake = await ethers.getContractFactory("VerifierStake");
-  const verifierStake = await VerifierStake.deploy(creditTokenAddress, retireAndCertifyAddress, deployer.address);
+  const verifierStake = await VerifierStake.deploy(creditTokenAddress, compensationPool, deployer.address);
   await verifierStake.waitForDeployment();
   const verifierStakeAddress = await verifierStake.getAddress();
   console.log("VerifierStake deployed to:", verifierStakeAddress);
@@ -65,6 +68,7 @@ async function main() {
   console.log("Marketplace:", marketplaceAddress);
   console.log("RetireAndCertify:", retireAndCertifyAddress);
   console.log("VerifierStake:", verifierStakeAddress);
+  console.log("CompensationPool:", compensationPool);
   console.log("Deployer:", deployer.address);
 }
 

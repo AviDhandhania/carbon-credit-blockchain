@@ -32,7 +32,8 @@ function CreditTokenPanel({ provider, signer, account, contractAddress, contract
 
       // Try to load batches from events
       const filter = contract.filters.BatchMinted();
-      const events = await contract.queryFilter(filter, -1000);
+      // ethers v6 rejects negative block numbers, so scan from genesis
+      const events = await contract.queryFilter(filter, 0);
       const batchList = events.map(e => ({
         batchId: e.args.batchId.toString(),
         projectId: e.args.projectId,

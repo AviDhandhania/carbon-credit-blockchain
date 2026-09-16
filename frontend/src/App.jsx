@@ -70,8 +70,7 @@ function App() {
             chainId: '0x7a69',
             chainName: 'Localhost Hardhat',
             nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-            rpcUrls: ['http://127.0.0.1:8545'],
-            blockExplorerUrls: []
+            rpcUrls: ['http://127.0.0.1:8545']
           }
         };
         
@@ -87,11 +86,16 @@ function App() {
 
   useEffect(() => {
     if (window.ethereum) {
-      window.ethereum.on('accountsChanged', (accounts) => {
+      window.ethereum.on('accountsChanged', async (accounts) => {
         if (accounts.length === 0) {
           disconnectWallet();
         } else {
           setAccount(accounts[0]);
+          // Refresh the signer too, otherwise the panels keep sending
+          // transactions from the previously selected account.
+          const web3Provider = new ethers.BrowserProvider(window.ethereum);
+          setProvider(web3Provider);
+          setSigner(await web3Provider.getSigner());
         }
       });
 

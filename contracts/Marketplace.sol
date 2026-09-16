@@ -74,8 +74,6 @@ contract Marketplace is AccessControl, ReentrancyGuard {
 
         userListings[msg.sender].push(listingId);
 
-        creditToken.approve(address(this), amount);
-
         emit ListingCreated(listingId, batchId, msg.sender, amount, pricePerToken);
         return listingId;
     }
@@ -86,7 +84,6 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         require(listing.isActive, "Listing not active");
 
         listing.isActive = false;
-        creditToken.approve(address(this), 0);
 
         emit ListingCancelled(listingId);
     }
@@ -108,7 +105,9 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         require(amount > 0 && amount <= listing.amount, "Invalid amount");
         require(!creditToken.isBatchFlagged(listing.batchId), "Batch is flagged");
 
-        uint256 totalPrice = amount * listing.pricePerToken;
+        // amount is in 18-decimal base units; pricePerToken is per whole credit
+        uint256 totalPrice = (amount * listing.pricePerToken) / 1e18;
+        require(totalPrice > 0, "Insufficient payment");
         require(msg.value >= totalPrice, "Insufficient payment");
 
         listing.amount -= amount;

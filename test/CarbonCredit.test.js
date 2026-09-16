@@ -151,6 +151,9 @@ describe("Marketplace", function () {
 
     const tx = await creditToken.connect(seller).mintBatch(PROJECT_ID, IPFS_HASH, INITIAL_AMOUNT);
     await tx.wait();
+
+    // Seller must approve the marketplace to transfer listed tokens
+    await creditToken.connect(seller).approve(await marketplace.getAddress(), INITIAL_AMOUNT);
   });
 
   describe("Deployment", function () {
@@ -239,17 +242,17 @@ describe("Marketplace", function () {
 
     it("Should allow buyer to purchase tokens", async function () {
       const buyAmount = ethers.parseUnits("50", 18);
-      const totalPrice = buyAmount * PRICE_PER_TOKEN;
+      const totalPrice = (buyAmount / 10n ** 18n) * PRICE_PER_TOKEN;
 
       await marketplace.connect(buyer1).buyTokens(listingId, buyAmount, { value: totalPrice });
 
       expect(await creditToken.getUserBatchBalance(1, buyer1.address)).to.equal(buyAmount);
-      expect(await creditToken.getUserBatchBalance(1, seller.address)).to.equal(LISTING_AMOUNT - buyAmount);
+      expect(await creditToken.getUserBatchBalance(1, seller.address)).to.equal(INITIAL_AMOUNT - buyAmount);
     });
 
     it("Should refund excess payment", async function () {
       const buyAmount = ethers.parseUnits("50", 18);
-      const totalPrice = buyAmount * PRICE_PER_TOKEN;
+      const totalPrice = (buyAmount / 10n ** 18n) * PRICE_PER_TOKEN;
       const excess = ethers.parseEther("0.1");
 
       const tx = await marketplace.connect(buyer1).buyTokens(listingId, buyAmount, { value: totalPrice + excess });
@@ -261,14 +264,14 @@ describe("Marketplace", function () {
 
     it("Should revert if insufficient payment", async function () {
       const buyAmount = ethers.parseUnits("50", 18);
-      const totalPrice = buyAmount * PRICE_PER_TOKEN;
+      const totalPrice = (buyAmount / 10n ** 18n) * PRICE_PER_TOKEN;
 
       await expect(marketplace.connect(buyer1).buyTokens(listingId, buyAmount, { value: totalPrice - 1n }))
         .to.be.revertedWith("Insufficient payment");
     });
 
     it("Should deactivate listing when fully purchased", async function () {
-      await marketplace.connect(buyer1).buyTokens(listingId, LISTING_AMOUNT, { value: LISTING_AMOUNT * PRICE_PER_TOKEN });
+      await marketplace.connect(buyer1).buyTokens(listingId, LISTING_AMOUNT, { value: (LISTING_AMOUNT / 10n ** 18n) * PRICE_PER_TOKEN });
       const listing = await marketplace.getListing(listingId);
       expect(listing[4]).to.be.false;
       expect(listing[2]).to.equal(0);
@@ -494,6 +497,63 @@ describe("VerifierStake", function () {
       const challenge = await verifierStake.getChallenge(1);
       expect(challenge[5]).to.be.true;
       expect(challenge[6]).to.be.false;
+    });
+
+    it("Should pay the challenger only their bond plus half the slashed stake", async function () {
+      // stake = 1 ETH -> slashed = 0.5 ETH -> challenger 0.25 ETH, pool 0.25 ETH
+      const SLASHED = ethers.parseEther("0.5");
+      const CHALLENGER_REWARD = SLASHED / 2n;
+      const COMPENSATION = SLASHED - CHALLENGER_REWARD;
+
+      const poolBefore = await ethers.provider.getBalance(owner.address);
+      const challengerBefore = await ethers.provider.getBalance(challenger.address);
+
+      await expect(verifierStake.connect(regulator).resolveChallenge(1, true))
+        .to.emit(verifierStake, "ChallengeResolved")
+        .withArgs(1, true, SLASHED, challenger.address);
+
+      const poolAfter = await ethers.provider.getBalance(owner.address);
+      const challengerAfter = await ethers.provider.getBalance(challenger.address);
+
+      expect(poolAfter - poolBefore).to.equal(COMPENSATION);
+      expect(challengerAfter - challengerBefore).to.equal(CHALLENGE_BOND + CHALLENGER_REWARD);
+
+      // The contract must still hold exactly the verifier's remaining stake
+      const verifierInfo = await verifierStake.getVerifierInfo(verifier.address);
+      expect(verifierInfo[0]).to.equal(MIN_STAKE - SLASHED);
+      expect(await verifierStake.getContractBalance()).to.equal(MIN_STAKE - SLASHED);
+    });
+  });
+
+  describe("Active Challenge Lock", function () {
+    beforeEach(async function () {
+      await verifierStake.connect(verifier).depositStake({ value: MIN_STAKE * 2n });
+      await verifierStake.connect(challenger).createChallenge(1, "QmEvidenceHash", { value: CHALLENGE_BOND });
+    });
+
+    it("Should block withdrawal while a challenge is pending", async function () {
+      await expect(verifierStake.connect(verifier).withdrawStake(MIN_STAKE))
+        .to.be.revertedWith("Active challenges exist");
+    });
+
+    it("Should allow withdrawal again once the challenge is resolved", async function () {
+      await verifierStake.connect(regulator).resolveChallenge(1, false);
+      await verifierStake.connect(verifier).withdrawStake(MIN_STAKE);
+
+      const info = await verifierStake.getVerifierInfo(verifier.address);
+      expect(info[0]).to.equal(MIN_STAKE);
+      expect(info[2]).to.be.true;
+    });
+  });
+
+  describe("Withdrawal Status", function () {
+    it("Should mark verifier inactive after withdrawing the whole stake", async function () {
+      await verifierStake.connect(verifier).depositStake({ value: MIN_STAKE });
+      await verifierStake.connect(verifier).withdrawStake(MIN_STAKE);
+
+      const info = await verifierStake.getVerifierInfo(verifier.address);
+      expect(info[0]).to.equal(0);
+      expect(info[2]).to.be.false;
     });
   });
 });

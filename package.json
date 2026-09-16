@@ -11,7 +11,7 @@
     "deploy:local": "hardhat run scripts/deploy.js --network localhost",
     "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia",
     "verify:sepolia": "hardhat verify --network sepolia",
-    "frontend": "cd frontend && npm start",
+    "frontend": "cd frontend && npm run dev",
     "frontend:build": "cd frontend && npm run build"
   },
   "keywords": [
@@ -32,9 +32,9 @@
     "@openzeppelin/contracts": "^5.0.2",
     "@typechain/ethers-v6": "^0.5.1",
     "@typechain/hardhat": "^9.1.0",
-    "@types/chai": "^5.2.3",
+    "@types/chai": "^4.3.6",
     "@types/mocha": "^10.0.10",
-    "chai": "^6.2.2",
+    "chai": "^4.3.6",
     "hardhat": "^2.19.4",
     "hardhat-gas-reporter": "^1.0.9",
     "solidity-coverage": "^0.8.5",

@@ -70,6 +70,39 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
         return batchId;
     }
 
+    /**
+     * @dev Keeps per-batch accounting in sync on regular transfers so credits
+     * move batch-tracking to the recipient (e.g. marketplace purchases).
+     * Minting and retirement manage batch state explicitly (see mintBatch and
+     * _retireBatch); direct burns bypass batch accounting.
+     */
+    function _update(address from, address to, uint256 value) internal override {
+        super._update(from, to, value);
+        if (from == address(0) || to == address(0) || from == to) return;
+
+        uint256 remaining = value;
+        uint256[] storage list = userBatches[from];
+        uint256 i = 0;
+        while (remaining > 0) {
+            require(i < list.length, "Batch balance mismatch");
+            uint256 batchId = list[i];
+            uint256 bal = batchBalances[batchId][from];
+            if (bal == 0) {
+                list[i] = list[list.length - 1];
+                list.pop();
+                continue;
+            }
+            uint256 move = bal < remaining ? bal : remaining;
+            batchBalances[batchId][from] = bal - move;
+            if (batchBalances[batchId][to] == 0) {
+                userBatches[to].push(batchId);
+            }
+            batchBalances[batchId][to] += move;
+            remaining -= move;
+            i++;
+        }
+    }
+
     function retireBatch(uint256 batchId, uint256 amount) external {
         _retireBatch(msg.sender, batchId, amount);
     }

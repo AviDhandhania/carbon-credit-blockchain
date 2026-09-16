@@ -41,7 +41,7 @@ This repository contains the **design deliverables** for a blockchain-based carb
 # Smart Contract Development
 npm install                           # Install dependencies
 npx hardhat compile                   # Compile contracts
-npx hardhat test                      # Run tests (36 passing)
+npx hardhat test                      # Run tests (44 passing)
 npx hardhat node                      # Start local Hardhat node
 npx hardhat run scripts/deploy.js --network localhost  # Deploy locally
 npx hardhat run scripts/deploy.js --network sepolia   # Deploy to Sepolia
@@ -61,8 +61,7 @@ pip install python-pptx python-docx matplotlib pillow  # Dependencies
 - **Report content lives in two places**: `docs/DA1_Report.md` AND `build_deliverables.py` — edit both or they drift
 - **Diagrams are generated** — do not edit PNGs directly; modify `diagrams/make_diagrams.py`
 - **Contract addresses** — Update `frontend/src/utils/contracts.js` after deployment
-- **Test coverage**: 36 passing tests covering all 4 contracts (CreditToken, Marketplace, RetireAndCertify, VerifierStake)
-- **4 failing tests** — Known Hardhat gas estimation issue (buyer accounts need more ETH for gas), not functional bugs
+- **Test coverage**: 44 passing tests covering all 4 contracts (CreditToken, Marketplace, RetireAndCertify, VerifierStake)
 
 ## Implementation Status (DA2 - 50% Complete)
 | Module | Status | Description |
@@ -71,7 +70,7 @@ pip install python-pptx python-docx matplotlib pillow  # Dependencies
 | **Marketplace** | ✅ Done | Create/cancel listings, buy tokens, price updates |
 | **RetireAndCertify** | ✅ Done | Burn credits, mint soulbound ERC-721 certificates (non-transferable) |
 | **VerifierStake** | ✅ Done | Deposit/withdraw stake, create/resolve challenges, slashing |
-| **Tests** | ✅ Done | 36 passing tests covering all functionality |
+| **Tests** | ✅ Done | 44 passing tests covering all functionality |
 | **Frontend** | ✅ Done | React + Vite + MetaMask integration for all 4 modules |
 | **Deployment** | ✅ Ready | Hardhat deploy script with role configuration |
 

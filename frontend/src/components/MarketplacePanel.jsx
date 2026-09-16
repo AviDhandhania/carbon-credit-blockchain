@@ -109,7 +109,8 @@ function MarketplacePanel({ provider, signer, account, contractAddress, contract
       const listing = listings.find(l => l.listingId === buyForm.listingId);
       if (!listing) throw new Error('Listing not found');
       
-      const totalPrice = amount * BigInt(ethers.parseEther(listing.pricePerToken));
+      // Contract charges (amount * pricePerToken) / 1e18
+      const totalPrice = (amount * ethers.parseEther(listing.pricePerToken)) / 10n ** 18n;
       const tx = await contract.buyTokens(buyForm.listingId, amount, { 
         value: totalPrice 
       });

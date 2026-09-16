@@ -37,6 +37,8 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
     mapping(address => VerifierInfo) public verifiers;
     mapping(uint256 => Challenge) public challenges;
     mapping(uint256 => uint256[]) public batchChallenges;
+    // Number of unresolved challenges against each verifier's batches
+    mapping(address => uint256) public activeChallengeCount;
     uint256 public challengeCount;
     address public compensationPool;
 
@@ -82,6 +84,9 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
         require(!hasActiveChallenges(msg.sender), "Active challenges exist");
 
         verifier.stake -= amount;
+        if (verifier.stake < MIN_STAKE) {
+            verifier.isActive = false;
+        }
         payable(msg.sender).transfer(amount);
         emit StakeWithdrawn(msg.sender, amount);
     }
@@ -108,6 +113,8 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
 
         batchChallenges[batchId].push(challengeId);
 
+        activeChallengeCount[creditToken.getBatchVerifier(batchId)]++;
+
         emit ChallengeCreated(challengeId, batchId, msg.sender, evidenceHash);
     }
 
@@ -124,8 +131,9 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
         challenge.isResolved = true;
         challenge.challengerWon = challengerWins;
 
+        uint256 slashedAmount = 0;
         if (challengerWins) {
-            uint256 slashedAmount = verifierInfo.stake / 2;
+            slashedAmount = verifierInfo.stake / 2;
             uint256 challengerReward = slashedAmount / 2;
             uint256 compensationAmount = slashedAmount - challengerReward;
 
@@ -134,9 +142,10 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
                 verifierInfo.isActive = false;
             }
 
+            // Bond is returned plus the challenger's half of the slashed stake;
+            // the other half goes to the compensation pool.
             payable(challenge.challenger).transfer(challenge.bond + challengerReward);
             payable(compensationPool).transfer(compensationAmount);
-            payable(challenge.challenger).transfer(compensationAmount);
 
             creditToken.flagBatch(challenge.batchId, true);
 
@@ -147,7 +156,11 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
             emit CompensationPoolUpdated(address(compensationPool).balance);
         }
 
-        emit ChallengeResolved(challengeId, challengerWins, challengerWins ? verifierInfo.stake / 2 : 0, challengerWins ? challenge.challenger : compensationPool);
+        if (activeChallengeCount[verifier] > 0) {
+            activeChallengeCount[verifier]--;
+        }
+
+        emit ChallengeResolved(challengeId, challengerWins, slashedAmount, challengerWins ? challenge.challenger : compensationPool);
     }
 
     function getVerifierInfo(address verifier)
@@ -185,7 +198,7 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
     }
 
     function hasActiveChallenges(address verifier) internal view returns (bool) {
-        return false;
+        return activeChallengeCount[verifier] > 0;
     }
 
     function grantVerifierRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
