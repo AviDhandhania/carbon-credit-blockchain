@@ -17,11 +17,14 @@ function MarketplacePanel({ provider, signer, account, contractAddress, contract
       const ct = new ethers.Contract(creditTokenAddress, creditTokenABI, signer || provider);
       setContract(c);
       setCreditToken(ct);
-      loadData();
+      // Pass the instance: loadData's closure would otherwise still see the
+      // previous (null) state on this render, and the first load would no-op.
+      loadData(c);
     }
   }, [provider, signer, contractAddress, creditTokenAddress]);
 
-  const loadData = async () => {
+  const loadData = async (instance = contract) => {
+    const contract = instance;
     if (!contract) return;
     setLoading(true);
     try {

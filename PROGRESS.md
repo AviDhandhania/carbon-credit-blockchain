@@ -23,6 +23,7 @@ Single source of truth for what is built, what is verified, and what is delibera
 | Contract compile | `npx hardhat compile` | 7 Solidity files, 0 errors |
 | Local deploy | `npx hardhat run scripts/deploy.js --network localhost` | 6 contracts, exit 0 |
 | End-to-end (live chain, frontend ABIs) | `cd frontend && node scripts/verify-integration.mjs` | **25 passed, 0 failed** (exit 0) |
+| Browser render (headless Chrome, real app) | `cd frontend && node scripts/browser-check.mjs` | **13 passed, 0 failed** (exit 0) |
 | Frontend build | `cd frontend && npm run build` | success, exit 0 |
 
 Test count history: the DA2 report and `AGENTS.md` disagreed (`36` vs `44`); both were stale. The
@@ -137,6 +138,7 @@ funding task rather than a code task.
 | Deploy script | ✅ Done | Deploys 6 contracts, wires roles, revokes single-key regulator by default |
 | Tests | ✅ Done | 109 passing |
 | End-to-end check | ✅ Done | `frontend/scripts/verify-integration.mjs`, 25 assertions |
+| Browser check | ✅ Done | `frontend/scripts/browser-check.mjs`, 13 assertions in headless Chrome |
 
 ---
 
@@ -183,5 +185,14 @@ KEEP_DEPLOYER_REGULATOR=true npx hardhat run scripts/deploy.js --network localho
 3. **Transfer freeze is admin-liftable** — `flagBatch(_, false)` restores transferability. That is a
    deliberate escape hatch, but it means the freeze is only as trustworthy as the admin key.
 4. **Hardhat warns about Node v24** — everything passes, but Node 20 LTS is the supported target.
-5. **Browser rendering is unverified in CI** — the dev server and every component compile, and the
-   ABIs are exercised against a live chain, but no headless-browser run asserts what the panels paint.
+5. **The browser check drives the UI with an injected EIP-1193 provider, not real MetaMask.** It
+   verifies rendering, wallet connect and live data binding against the real chain and the real app
+   code, but MetaMask-specific UX (popup approval, network-switch prompts) is outside its reach.
+
+The browser check exists because the "unverified rendering" caveat stood for the whole project: it
+loads the real dev server in headless Chrome, connects through the app's own connect path, and asserts
+what the DOM paints — every panel present, Total Supply bound to chain state, the multisig panel
+showing its 3-of-5 threshold and five owners, and no console errors. It also caught a real bug on its
+first run: the four original panels called `loadData()` from the mount effect with a stale closure, so
+their first load no-oped and the UI stayed empty until the user's first action. All four now pass the
+contract instance explicitly (the pattern the multisig panel already used).

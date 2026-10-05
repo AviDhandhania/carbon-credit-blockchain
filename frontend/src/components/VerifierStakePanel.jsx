@@ -20,11 +20,14 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
     if (provider && contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
       const c = new ethers.Contract(contractAddress, contractABI, signer || provider);
       setContract(c);
-      loadData();
+      // Pass the instance: loadData's closure would otherwise still see the
+      // previous (null) state on this render, and the first load would no-op.
+      loadData(c);
     }
   }, [provider, signer, contractAddress]);
 
-  const loadData = async () => {
+  const loadData = async (instance = contract) => {
+    const contract = instance;
     if (!contract) return;
     setLoading(true);
     try {
