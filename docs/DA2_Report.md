@@ -138,7 +138,8 @@ This report documents the **50% implementation (DA2)** of that design — a work
 ### 3.4 Testing Methodology
 
 **Framework**: Hardhat + Chai + ethers.js v6  
-**Coverage**: 36 passing tests across 4 contract suites
+**Coverage**: 44 passing tests across 4 contract suites (this suite). The repository total is now
+106 passing after the DA3 additions — see [`PROGRESS.md`](../PROGRESS.md).
 
 | Test Suite | Tests | Coverage |
 |------------|-------|----------|
@@ -190,33 +191,42 @@ npx hardhat verify --network sepolia <address> <constructor_args>
 
 ## 4. Current Limitations & DA3 Roadmap
 
-| Limitation | DA3 Plan |
-|------------|----------|
-| Single regulator address | Multi-sig regulator panel (e.g., 3-of-5) |
-| Fixed challenge window | Configurable per-batch window |
-| No oracle integration | Satellite/MRV data oracle for automated evidence |
-| Single compensation pool | Per-batch compensation pools with pro-rata distribution |
-| Localhost/Sepolia only | Mainnet + Polygon/Arbitrum L2 deployment |
-| No batch fractionalization | Allow splitting batches for granular trading |
-| No off-ramp | Fiat on/off-ramp integration |
+| Limitation | DA3 Plan | Status |
+|------------|----------|--------|
+| Single regulator address | Multi-sig regulator panel (e.g., 3-of-5) | ✅ `RegulatorMultisig.sol` — 3-of-5, single-key role revoked at deploy |
+| Fixed challenge window | Configurable per-batch window | ✅ `defaultChallengeWindow` + per-batch override, 1–365 day bounds |
+| No oracle integration | Satellite/MRV data oracle for automated evidence | ✅ `IMRVOracle` + `MockMRVOracle`; `CreditToken` gates mints when wired |
+| Single compensation pool | Per-batch compensation pools with pro-rata distribution | ✅ `claimCompensation`, pro-rata by frozen supply snapshot |
+| Localhost/Sepolia only | Mainnet + Polygon/Arbitrum L2 deployment | ⛔ Blocked: needs funded keys (configuration only, no code) |
+| No batch fractionalization | Allow splitting batches for granular trading | ✅ `CreditToken.splitBatch`, supply-invariant |
+| No off-ramp | Fiat on/off-ramp integration | ⛔ Out of scope: needs a payments vendor and KYC |
 
 ---
 
 ## 5. Conclusion
 
-DA2 delivers a **working 50% implementation** of the carbon credit trading system designed in DA1. All four core smart contracts are implemented, tested (36 passing), and integrated into a React frontend with MetaMask wallet connection. The novel verifier stake-and-challenge mechanism is fully functional, making this the first known on-chain carbon credit system where fraudulent verification carries direct economic consequences.
+DA2 delivers a **working 50% implementation** of the carbon credit trading system designed in DA1. All four core smart contracts are implemented, tested (44 passing in this suite), and integrated into a React frontend with MetaMask wallet connection. The novel verifier stake-and-challenge mechanism is fully functional, making this the first known on-chain carbon credit system where fraudulent verification carries direct economic consequences.
+
+Everything listed in §4 below has since been implemented; [`PROGRESS.md`](../PROGRESS.md) tracks the current state, the evidence, and the items that remain deliberately out of scope.
 
 The system is ready for Sepolia testnet deployment and real-world pilot testing with accredited verifiers.
 
 ---
 
-## Appendix: Contract Addresses (Post-Deployment)
+## Appendix: Contract Addresses (Localhost)
+
+Deterministic addresses from a fresh `npx hardhat node` followed by `npm run deploy:local`.
+These are the values hard-coded in `frontend/src/utils/contracts.js`.
 
 | Contract | Address | Network |
 |----------|---------|---------|
-| CreditToken | *Deploy and update* | Sepolia / Localhost |
-| Marketplace | *Deploy and update* | Sepolia / Localhost |
-| RetireAndCertify | *Deploy and update* | Sepolia / Localhost |
-| VerifierStake | *Deploy and update* | Sepolia / Localhost |
+| CreditToken | `0x5FbDB2315678afecb367f032d93F642f64180aa3` | Hardhat localhost (31337) |
+| Marketplace | `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512` | Hardhat localhost (31337) |
+| RetireAndCertify | `0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0` | Hardhat localhost (31337) |
+| VerifierStake | `0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9` | Hardhat localhost (31337) |
+| RegulatorMultisig | `0xa513E6E4b8f2a923D98304ec87F64353C4D5C853` | Hardhat localhost (31337) |
+| MockMRVOracle | `0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6` | Hardhat localhost (31337) |
 
-*Update `frontend/src/utils/contracts.js` with deployed addresses.*
+Deployment order is significant: the first four are deployed before the role-grant transactions so
+their addresses stay stable across reruns. For Sepolia, deploy and then update
+`frontend/src/utils/contracts.js` — no public deployment is currently recorded.

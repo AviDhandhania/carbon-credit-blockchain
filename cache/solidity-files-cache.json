@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "C:\\Users\\SHIVESH KUMAR\\Desktop\\carbon-credit-blockchain\\contracts\\CreditToken.sol": {
-      "lastModificationDate": 1789581190544,
-      "contentHash": "406b98f2ca3b66448878e8335ad0e3e0",
+      "lastModificationDate": 1791211562942,
+      "contentHash": "e197820814c36d42436a67bdedf15398",
       "sourceName": "contracts/CreditToken.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -33,7 +33,8 @@
       "imports": [
         "@openzeppelin/contracts/token/ERC20/ERC20.sol",
         "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol",
-        "@openzeppelin/contracts/access/AccessControl.sol"
+        "@openzeppelin/contracts/access/AccessControl.sol",
+        "./interfaces/IMRVOracle.sol"
       ],
       "versionPragmas": [
         "^0.8.20"
@@ -431,8 +432,8 @@
       ]
     },
     "C:\\Users\\SHIVESH KUMAR\\Desktop\\carbon-credit-blockchain\\contracts\\VerifierStake.sol": {
-      "lastModificationDate": 1789585276295,
-      "contentHash": "a861f87a07dcb62bd90ef61f3bc61675",
+      "lastModificationDate": 1791211508750,
+      "contentHash": "468d7bdc7632ff707d4a7ca93457a709",
       "sourceName": "contracts/VerifierStake.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -1021,6 +1022,121 @@
       ],
       "artifacts": [
         "Marketplace"
+      ]
+    },
+    "C:\\Users\\SHIVESH KUMAR\\Desktop\\carbon-credit-blockchain\\contracts\\interfaces\\IMRVOracle.sol": {
+      "lastModificationDate": 1791211277055,
+      "contentHash": "2062404d5d13233f4b2e6b3d51bb790a",
+      "sourceName": "contracts/interfaces/IMRVOracle.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "IMRVOracle"
+      ]
+    },
+    "C:\\Users\\SHIVESH KUMAR\\Desktop\\carbon-credit-blockchain\\contracts\\MockMRVOracle.sol": {
+      "lastModificationDate": 1791211411827,
+      "contentHash": "300fc9461de6f024d2210ae28edfb176",
+      "sourceName": "contracts/MockMRVOracle.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/access/AccessControl.sol",
+        "./interfaces/IMRVOracle.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "MockMRVOracle"
+      ]
+    },
+    "C:\\Users\\SHIVESH KUMAR\\Desktop\\carbon-credit-blockchain\\contracts\\RegulatorMultisig.sol": {
+      "lastModificationDate": 1791211432841,
+      "contentHash": "74251c440735824041316c4f305b12cc",
+      "sourceName": "contracts/RegulatorMultisig.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "IChallengeResolver",
+        "RegulatorMultisig"
       ]
     }
   }

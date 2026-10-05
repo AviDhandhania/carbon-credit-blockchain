@@ -49,11 +49,64 @@ async function main() {
   await retireAndCertify.grantRetireRole(deployer.address);
   console.log("RETIRE_ROLE granted to deployer");
 
+  // Deploy RegulatorMultisig (roadmap 1).
+  //
+  // Deployed AFTER the original four so their addresses do not move and
+  // frontend/src/utils/contracts.js keeps pointing at the right contracts.
+  // OWNERS default to the first five local Hardhat accounts; override with
+  // MULTISIG_OWNERS for a real panel. Deployer keeps REGULATOR_ROLE only when
+  // KEEP_DEPLOYER_REGULATOR=true, so by default no single key can slash.
+  const ownerEnv = process.env.MULTISIG_OWNERS || "";
+  const signers = await ethers.getSigners();
+  const multisigOwners = ownerEnv
+    ? ownerEnv.split(",").map((a) => a.trim()).filter(Boolean)
+    : signers.slice(0, 5).map((s) => s.address);
+  const threshold = Number(process.env.MULTISIG_THRESHOLD || 3);
+
+  const RegulatorMultisig = await ethers.getContractFactory("RegulatorMultisig");
+  const regulatorMultisig = await RegulatorMultisig.deploy(
+    multisigOwners,
+    threshold,
+    verifierStakeAddress
+  );
+  await regulatorMultisig.waitForDeployment();
+  const regulatorMultisigAddress = await regulatorMultisig.getAddress();
+  console.log(
+    `RegulatorMultisig deployed to: ${regulatorMultisigAddress} (${threshold}-of-${multisigOwners.length})`
+  );
+
+  // Deploy the mock MRV oracle (roadmap 3). Deployed but NOT wired by default,
+  // because wiring it makes every mint require an attestation.
+  const MockMRVOracle = await ethers.getContractFactory("MockMRVOracle");
+  const mrvOracle = await MockMRVOracle.deploy(deployer.address);
+  await mrvOracle.waitForDeployment();
+  const mrvOracleAddress = await mrvOracle.getAddress();
+  console.log("MockMRVOracle deployed to:", mrvOracleAddress);
+
   // VerifierStake roles
   await verifierStake.grantVerifierRole(deployer.address);
   await verifierStake.grantRegulatorRole(deployer.address);
   await verifierStake.grantChallengerRole(deployer.address);
   console.log("VERIFIER_ROLE, REGULATOR_ROLE, CHALLENGER_ROLE granted to deployer");
+
+  // The panel becomes the regulator. Single-key regulation is revoked unless
+  // explicitly kept, which is the whole point of roadmap item 1.
+  await verifierStake.grantRegulatorRole(regulatorMultisigAddress);
+  console.log("REGULATOR_ROLE granted to RegulatorMultisig");
+  if (process.env.KEEP_DEPLOYER_REGULATOR === "true") {
+    console.log("KEEP_DEPLOYER_REGULATOR=true -> deployer keeps single-key regulator power");
+  } else {
+    await verifierStake.revokeRegulatorRole(deployer.address);
+    console.log("REGULATOR_ROLE revoked from deployer (panel-only regulation)");
+  }
+
+  // Optionally route minting through the MRV oracle.
+  if (process.env.USE_MRV_ORACLE === "true") {
+    await creditToken.setMRVOracle(mrvOracleAddress);
+    console.log("CreditToken MRV oracle wired to MockMRVOracle");
+  } else {
+    console.log("MRV oracle deployed but not wired (set USE_MRV_ORACLE=true to enable)");
+  }
 
   // Grant VerifierStake admin role on CreditToken for flagging
   await creditToken.grantRole(await creditToken.DEFAULT_ADMIN_ROLE(), verifierStakeAddress);
@@ -68,7 +121,11 @@ async function main() {
   console.log("Marketplace:", marketplaceAddress);
   console.log("RetireAndCertify:", retireAndCertifyAddress);
   console.log("VerifierStake:", verifierStakeAddress);
-  console.log("CompensationPool:", compensationPool);
+  console.log("RegulatorMultisig:", regulatorMultisigAddress);
+  console.log("MockMRVOracle:", mrvOracleAddress);
+  console.log("CompensationPool (losing bonds):", compensationPool);
+  console.log("Multisig owners:", multisigOwners.join(", "));
+  console.log("Multisig threshold:", threshold);
   console.log("Deployer:", deployer.address);
 }
 

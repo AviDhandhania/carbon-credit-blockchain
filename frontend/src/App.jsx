@@ -5,6 +5,7 @@ import CreditTokenPanel from './components/CreditTokenPanel';
 import MarketplacePanel from './components/MarketplacePanel';
 import RetireCertifyPanel from './components/RetireCertifyPanel';
 import VerifierStakePanel from './components/VerifierStakePanel';
+import RegulatorMultisigPanel from './components/RegulatorMultisigPanel';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from './utils/contracts';
 
 function App() {
@@ -119,7 +120,7 @@ function App() {
     <div className="container">
       <header className="header">
         <h1>🌿 Carbon Credit Trading System</h1>
-        <p>Blockchain-based carbon credit marketplace with verifier staking and soulbound certificates</p>
+        <p>Blockchain-based carbon credit marketplace with verifier staking, panel-gated disputes and soulbound certificates</p>
       </header>
 
       <WalletConnect
@@ -173,6 +174,14 @@ function App() {
             contractABI={CONTRACT_ABIS.VerifierStake}
             creditTokenAddress={CONTRACT_ADDRESSES.CreditToken}
             creditTokenABI={CONTRACT_ABIS.CreditToken}
+          />
+
+          <RegulatorMultisigPanel
+            provider={provider}
+            signer={signer}
+            account={account}
+            contractAddress={CONTRACT_ADDRESSES.RegulatorMultisig}
+            contractABI={CONTRACT_ABIS.RegulatorMultisig}
           />
         </>
       )}

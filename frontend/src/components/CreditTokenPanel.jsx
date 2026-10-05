@@ -10,6 +10,7 @@ function CreditTokenPanel({ provider, signer, account, contractAddress, contract
   const [error, setError] = useState(null);
   const [mintForm, setMintForm] = useState({ projectId: '', ipfsHash: '', amount: '' });
   const [retireForm, setRetireForm] = useState({ batchId: '', amount: '' });
+  const [splitForm, setSplitForm] = useState({ batchId: '', amount: '', projectId: '' });
 
   useEffect(() => {
     if (provider && contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
@@ -82,6 +83,26 @@ function CreditTokenPanel({ provider, signer, account, contractAddress, contract
       setRetireForm({ batchId: '', amount: '' });
     } catch (err) {
       setError('Retire failed: ' + err.message);
+    }
+  };
+
+  // Fractionalization: regroup part of a batch into a child batch so a project
+  // vintage can be traded in granular lots without minting new credits.
+  const handleSplit = async (e) => {
+    e.preventDefault();
+    if (!contract || !signer) return;
+    setError(null);
+    try {
+      const tx = await contract.splitBatch(
+        splitForm.batchId,
+        ethers.parseUnits(splitForm.amount, 18),
+        splitForm.projectId
+      );
+      await tx.wait();
+      loadData();
+      setSplitForm({ batchId: '', amount: '', projectId: '' });
+    } catch (err) {
+      setError('Split failed: ' + err.message);
     }
   };
 
@@ -176,6 +197,50 @@ function CreditTokenPanel({ provider, signer, account, contractAddress, contract
             </div>
             <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
               {loading ? 'Processing...' : 'Retire Credits'}
+            </button>
+          </form>
+        </div>
+
+        <div>
+          <h3>Split Batch (Fractionalize)</h3>
+          <p style={{ fontSize: '0.85rem', color: '#666' }}>
+            Moves part of a batch into a new child batch that inherits the same verifier
+            and evidence. No credits are minted, so total supply is unchanged.
+          </p>
+          <form onSubmit={handleSplit}>
+            <div className="form-group">
+              <label>Parent Batch ID</label>
+              <input
+                type="number"
+                value={splitForm.batchId}
+                onChange={(e) => setSplitForm({ ...splitForm, batchId: e.target.value })}
+                placeholder="1"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Amount to Split (tonnes CO2)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={splitForm.amount}
+                onChange={(e) => setSplitForm({ ...splitForm, amount: e.target.value })}
+                placeholder="100"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Child Project ID</label>
+              <input
+                type="text"
+                value={splitForm.projectId}
+                onChange={(e) => setSplitForm({ ...splitForm, projectId: e.target.value })}
+                placeholder="PROJ-001-A"
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
+              {loading ? 'Splitting...' : 'Split Batch'}
             </button>
           </form>
         </div>

@@ -1,6 +1,6 @@
 # Blockchain Based Carbon Credit Trading System
 
-**Blockchain Technology — Digital Assignment 1 (design) + Digital Assignment 2 (working 50% implementation)**
+**Blockchain Technology — Digital Assignment 1 (design) + Digital Assignment 2 and 3 (implementation)**
 **SDG 13, Climate Action** (also supports SDG 7 and SDG 12)
 **By:** Avi Dhandhania (25BCE1207), Shivesh Kumar (25BCE1067)
 
@@ -13,7 +13,10 @@ The part we have not found elsewhere is what happens when the data going in is a
 | | |
 |---|---|
 | **DA1 — design** | Complete: report, presentation, diagrams |
-| **DA2 — implementation** | 4 smart contracts, test suite, React frontend, deploy script |
+| **DA2 — core implementation** | 4 smart contracts, test suite, React frontend, deploy script |
+| **DA3 — roadmap features** | Regulator multisig, configurable windows, MRV oracle, fractionalization, pro-rata compensation |
+
+Live status, roadmap tracker and known limitations: **[`PROGRESS.md`](PROGRESS.md)**.
 
 ## DA1 Deliverables
 
@@ -24,19 +27,30 @@ The part we have not found elsewhere is what happens when the data going in is a
 | Presentation (PowerPoint) | [`presentation/DA1_Presentation.pptx`](presentation/DA1_Presentation.pptx) |
 | Design diagrams (PNG) | [`diagrams/`](diagrams/) |
 
-## DA2 Deliverables
+## DA2/DA3 Deliverables
 
 | Deliverable | Location |
 |-------------|----------|
 | DA2 report (Markdown) | [`docs/DA2_Report.md`](docs/DA2_Report.md) |
-| Smart contracts (Solidity 0.8.20) | [`contracts/`](contracts/) |
-| Test suite (44 passing) | [`test/CarbonCredit.test.js`](test/CarbonCredit.test.js) |
+| Smart contracts (Solidity 0.8.20, 6 contracts) | [`contracts/`](contracts/) |
+| Test suite (106 passing) | [`test/`](test/) |
+| End-to-end check (25 assertions) | [`frontend/scripts/verify-integration.mjs`](frontend/scripts/verify-integration.mjs) |
 | Deploy script | [`scripts/deploy.js`](scripts/deploy.js) |
 | React frontend | [`frontend/`](frontend/) |
 
+### DA3 additions
+
+| Feature | Where |
+|---------|-------|
+| 3-of-5 regulator multisig gates challenge resolution | `contracts/RegulatorMultisig.sol` |
+| Per-batch configurable challenge window (1–365 days) | `VerifierStake.setBatchChallengeWindow` |
+| MRV oracle attestation for minting | `contracts/interfaces/IMRVOracle.sol`, `contracts/MockMRVOracle.sol` |
+| Batch fractionalization (supply-invariant) | `CreditToken.splitBatch` |
+| Per-batch compensation pools, pro-rata to buyers | `VerifierStake.claimCompensation` |
+
 ---
 
-# Running the project (DA2)
+# Running the project
 
 ## 1. Prerequisites
 
@@ -52,7 +66,7 @@ npm install
 
 ```bash
 npx hardhat compile                  # compile the contracts
-npx hardhat test                     # 44 tests, all passing
+npx hardhat test                     # 106 tests, all passing
 npx hardhat coverage                 # optional coverage report
 REPORT_GAS=true npx hardhat test     # optional gas report
 ```
@@ -139,12 +153,18 @@ npm run verify:sepolia -- <address> <constructor args>
 
 **RetireAndCertify** burns credits and mints an ERC-721 certificate of retirement in the same transaction. `_update`, `approve` and `setApprovalForAll` all revert, so the certificate is soulbound — it can never be transferred, approved or resold.
 
-**VerifierStake** is the novel part. A verifier must deposit ≥ 1 ETH before approving projects. Within 90 days of a batch being minted anyone can open a challenge by posting a 0.1 ETH bond plus an IPFS evidence hash. A regulator resolves it:
+**VerifierStake** is the novel part. A verifier must deposit ≥ 1 ETH before approving projects. Within the challenge window (90 days by default, configurable per batch between 1 and 365 days) anyone can open a challenge by posting a 0.1 ETH bond plus an IPFS evidence hash.
 
-- **Challenger wins** — half the verifier's stake is slashed: a quarter to the challenger (on top of their returned bond) and a quarter to the compensation pool. The batch is flagged.
-- **Verifier wins** — the stake is untouched and the challenger forfeits their bond to the compensation pool.
+The window is resolved by a **3-of-5 regulator multisig**, not a single key — the deployer's own regulator role is revoked at deploy time. A resolution is proposed once and executes automatically on the third approval. Then:
+
+- **Challenger wins** — half the verifier's stake is slashed: a quarter to the challenger (on top of their returned bond) and a quarter into that batch's **compensation pool**, which buyers draw from pro-rata via `claimCompensation`. The batch is flagged, and the slashed verifier cannot claim from its own pool.
+- **Verifier wins** — the stake is untouched and the challenger forfeits their bond.
 
 While a challenge is open the verifier cannot withdraw their stake, so they cannot exit ahead of a ruling.
+
+**RegulatorMultisig** holds `REGULATOR_ROLE` on VerifierStake. Owners can be rotated by a threshold action, and the panel refuses to shrink below its own threshold.
+
+**CreditToken** also supports **fractionalization**: `splitBatch` moves part of a batch into a child batch that inherits the verifier and evidence, without minting anything, so total supply is invariant. And when an MRV oracle is wired in, `mintBatch` additionally requires an approved project with a matching evidence hash.
 
 ## Frontend
 
@@ -156,7 +176,8 @@ React 18 + Vite 5 + ethers v6, wallet via MetaMask. One `BrowserProvider`/signer
 | `CreditTokenPanel.jsx` | Mint a batch, retire credits, list minted batches |
 | `MarketplacePanel.jsx` | Create/cancel listings, buy credits, view active and own listings |
 | `RetireCertifyPanel.jsx` | Retire credits and mint a soulbound certificate, view certificates |
-| `VerifierStakePanel.jsx` | Deposit/withdraw stake, open a challenge, resolve a challenge (regulator) |
+| `VerifierStakePanel.jsx` | Deposit/withdraw stake, open a challenge, claim buyer compensation, configure challenge windows |
+| `RegulatorMultisigPanel.jsx` | View the panel, propose a resolution, approve it, execute |
 
 **A walkthrough that exercises everything** (all steps from the deployer account unless noted):
 
@@ -168,13 +189,16 @@ React 18 + Vite 5 + ethers v6, wallet via MetaMask. One `BrowserProvider`/signer
 6. 🛡️ **Deposit Stake** → `1` ETH.
 7. 🛡️ **Create Challenge** → batch `1`, evidence `QmEvidence1` (0.1 ETH bond).
 8. 🛡️ **Withdraw Stake** → `1` — this is *expected to revert* with `Active challenges exist`: the stake is locked while a challenge is open.
-9. 🛡️ **Resolve Challenge** → challenge `1`, *Challenger Wins* → verifier's stake drops to 0.5 ETH, the batch is flagged, and the challenger is paid their bond plus a quarter of the slash.
+9. 🏛️ **Regulator Multisig** → *Propose Resolution* → challenge `1`, *Challenger Wins*. Then approve it from **three different accounts**: switch MetaMask to accounts #1 and #2 and hit *Approve*. The resolution fires automatically on the third approval — the verifier's stake drops to 0.5 ETH, the batch is flagged, and the challenger is paid their bond plus a quarter of the slash. (Trying to resolve directly as the deployer now reverts, which is the point.)
+10. 🛡️ **VerifierStake** → under *Claim Buyer Compensation*, enter batch `1` to see the pool. If that batch spread across accounts it pays each holder pro-rata; the verifier who was slashed is rejected.
 
 Note that once a batch is flagged in step 9 it can no longer be listed or retired — that is the point of flagging, so resolve as *Verifier Wins* instead if you want to keep trading that batch.
 
+If you would rather demo the single-key flow, deploy with `KEEP_DEPLOYER_REGULATOR=true`.
+
 ## Tests
 
-`npx hardhat test` — **44 passing**, covering all four contracts and the revert paths.
+`npx hardhat test` — **106 passing**, covering all six contracts and the revert paths.
 
 | Suite | Tests | Covers |
 |-------|-------|--------|
@@ -182,6 +206,22 @@ Note that once a batch is flagged in step 9 it can no longer be listed or retire
 | Marketplace | 12 | List, buy, cancel, price update, refunds, roles |
 | RetireAndCertify | 9 | Retire+certify, metadata, soulbound enforcement |
 | VerifierStake | 12 | Stake, withdraw, challenge, resolve, slashing payouts, stake lock |
+| CreditToken DA3 | 19 | Fractionalization, supply invariants, MRV oracle gating |
+| VerifierStake DA3 | 22 | Configurable windows, per-batch pro-rata compensation |
+| RegulatorMultisig | 21 | Threshold approval, owner rotation, execution guards |
+
+Sub-run breakdown of the DA3 rows: `batch fractionalization` 11 + `MRV oracle` 8 = 19;
+`configurable challenge window` 10 + `per-batch compensation pool` 12 = 22.
+Total: 11 + 12 + 9 + 12 + 19 + 22 + 21 = **106**.
+
+There is also an end-to-end check that drives the deployed contracts through the **same ABIs the
+frontend uses**, so a broken ABI string is caught rather than silently failing in the browser:
+
+```bash
+npx hardhat node                                       # terminal 1 (fresh)
+npx hardhat run scripts/deploy.js --network localhost  # terminal 2
+cd frontend && node scripts/verify-integration.mjs     # 25 assertions
+```
 
 ## Diagrams
 
@@ -197,11 +237,13 @@ Note that once a batch is flagged in step 9 it can no longer be listed or retire
 
 ```
 ├── contracts/                     # Solidity 0.8.20 (viaIR, optimizer 200 runs)
-├── test/CarbonCredit.test.js      # 44 tests
-├── scripts/deploy.js              # deploys + grants roles
+├── test/                          # 106 tests across the core and DA3 suites
+├── scripts/deploy.js              # deploys 6 contracts + grants/revokes roles
+├── PROGRESS.md                    # status, roadmap tracker, known limitations
 ├── frontend/                      # React + Vite frontend
 │   └── src/
 │       ├── components/            # one panel per module
+│       ├── scripts/               # verify-integration.mjs end-to-end check
 │       ├── utils/contracts.js     # addresses & ABIs
 │       └── App.jsx                # wallet connection
 ├── diagrams/                      # generated PNGs + make_diagrams.py

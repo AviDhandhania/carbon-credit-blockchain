@@ -2,10 +2,14 @@
 export const CONTRACT_ADDRESSES = {
   // Addresses from a fresh `npx hardhat node` + `npm run deploy:local` run.
   // Redeploying on a node that already has history shifts these (deployer nonce).
+  // The first four are deployed first, so they stay stable across deployments;
+  // the two added in DA3 sit after the role-grant transactions.
   CreditToken: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
   Marketplace: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
   RetireAndCertify: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
   VerifierStake: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
+  RegulatorMultisig: '0xa513E6E4b8f2a923D98304ec87F64353C4D5C853',
+  MockMRVOracle: '0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6',
 };
 
 // Contract ABIs
@@ -23,8 +27,16 @@ export const CONTRACT_ABIS = {
     "function getBatchVerifier(uint256 batchId) view returns (address)",
     "function getBatchTimestamp(uint256 batchId) view returns (uint256)",
     "function getBatchProjectId(uint256 batchId) view returns (string)",
+    "function getBatchAmount(uint256 batchId) view returns (uint256)",
+    "function getBatchSupply(uint256 batchId) view returns (uint256)",
+    "function getBatchParent(uint256 batchId) view returns (uint256)",
     "function getUserBatchBalance(uint256 batchId, address user) view returns (uint256)",
     "function isBatchFlagged(uint256 batchId) view returns (bool)",
+    "function splitBatch(uint256 batchId, uint256 amount, string projectId) returns (uint256)",
+    "function mrvOracle() view returns (address)",
+    "function setMRVOracle(address oracle)",
+    "event BatchSplit(uint256 indexed parentBatchId, uint256 indexed childBatchId, address indexed holder, uint256 amount)",
+    "event MRVOracleUpdated(address indexed newOracle)",
     "function approve(address spender, uint256 amount) returns (bool)",
     "function allowance(address owner, address spender) view returns (uint256)",
     "function grantMinterRole(address account)",
@@ -58,6 +70,9 @@ export const CONTRACT_ABIS = {
     "event CertificateMinted(uint256 indexed certificateId, address indexed owner, uint256 indexed batchId, uint256 amountRetired, string projectId)"
   ],
   VerifierStake: [
+    "function hasRole(bytes32 role, address account) view returns (bool)",
+    "function DEFAULT_ADMIN_ROLE() view returns (bytes32)",
+    "function REGULATOR_ROLE() view returns (bytes32)",
     "function depositStake() payable",
     "function withdrawStake(uint256 amount)",
     "function createChallenge(uint256 batchId, string evidenceHash) payable",
@@ -66,8 +81,46 @@ export const CONTRACT_ABIS = {
     "function getChallenge(uint256 challengeId) view returns (uint256, address, string, uint256, uint256, bool, bool)",
     "function getBatchChallenges(uint256 batchId) view returns (uint256[])",
     "function challengeCount() view returns (uint256)",
+    "function getChallengeWindow(uint256 batchId) view returns (uint256)",
+    "function defaultChallengeWindow() view returns (uint256)",
+    "function batchChallengeWindow(uint256 batchId) view returns (uint256)",
+    "function setDefaultChallengeWindow(uint256 window)",
+    "function setBatchChallengeWindow(uint256 batchId, uint256 window)",
+    "function clearBatchChallengeWindow(uint256 batchId)",
+    "function claimCompensation(uint256 batchId) returns (uint256)",
+    "function batchCompensationPool(uint256 batchId) view returns (uint256)",
+    "function batchCompensationTotal(uint256 batchId) view returns (uint256)",
+    "function batchCompensationDenominator(uint256 batchId) view returns (uint256)",
+    "function compensationClaimedTokens(uint256 batchId, address claimant) view returns (uint256)",
     "event StakeDeposited(address indexed verifier, uint256 amount)",
     "event ChallengeCreated(uint256 indexed challengeId, uint256 indexed batchId, address indexed challenger, string evidenceHash)",
-    "event ChallengeResolved(uint256 indexed challengeId, bool challengerWon, uint256 slashedAmount, address indexed recipient)"
+    "event ChallengeResolved(uint256 indexed challengeId, bool challengerWon, uint256 slashedAmount, address indexed recipient)",
+    "event DefaultChallengeWindowUpdated(uint256 newWindow)",
+    "event BatchChallengeWindowUpdated(uint256 indexed batchId, uint256 newWindow)",
+    "event CompensationPoolDeposited(uint256 indexed batchId, uint256 amount, uint256 denominator)",
+    "event CompensationClaimed(uint256 indexed batchId, address indexed claimant, uint256 amount)"
+  ],
+  RegulatorMultisig: [
+    "function threshold() view returns (uint256)",
+    "function owners() view returns (address[])",
+    "function ownerCount() view returns (uint256)",
+    "function isOwner(address account) view returns (bool)",
+    "function verifierStake() view returns (address)",
+    "function proposals(uint256 challengeId) view returns (uint256 challengeId_, bool challengerWins, uint256 approvals, bool executed, bool exists)",
+    "function approved(uint256 challengeId, address owner) view returns (bool)",
+    "function proposeResolution(uint256 challengeId, bool challengerWins)",
+    "function approveResolution(uint256 challengeId)",
+    "function executeResolution(uint256 challengeId)",
+    "event ResolutionProposed(uint256 indexed challengeId, bool challengerWins, address indexed proposer)",
+    "event ResolutionApproved(uint256 indexed challengeId, address indexed owner, uint256 approvals)",
+    "event ResolutionExecuted(uint256 indexed challengeId, bool challengerWins)"
+  ],
+  MockMRVOracle: [
+    "function isProjectApproved(string projectId) view returns (bool)",
+    "function getProjectHash(string projectId) view returns (bytes32)",
+    "function getVerifiedTonnage(string projectId) view returns (uint256)",
+    "function attestProjectWithString(string projectId, string ipfsHash, uint256 tonnage, bool approved)",
+    "function attestProject(string projectId, bytes32 evidenceHash, uint256 tonnage, bool approved)",
+    "event ProjectAttested(string indexed projectId, bytes32 evidenceHash, uint256 tonnage, bool approved)"
   ]
 };

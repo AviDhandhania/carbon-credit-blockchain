@@ -505,23 +505,25 @@ describe("VerifierStake", function () {
       const CHALLENGER_REWARD = SLASHED / 2n;
       const COMPENSATION = SLASHED - CHALLENGER_REWARD;
 
-      const poolBefore = await ethers.provider.getBalance(owner.address);
       const challengerBefore = await ethers.provider.getBalance(challenger.address);
 
       await expect(verifierStake.connect(regulator).resolveChallenge(1, true))
         .to.emit(verifierStake, "ChallengeResolved")
         .withArgs(1, true, SLASHED, challenger.address);
 
-      const poolAfter = await ethers.provider.getBalance(owner.address);
       const challengerAfter = await ethers.provider.getBalance(challenger.address);
 
-      expect(poolAfter - poolBefore).to.equal(COMPENSATION);
       expect(challengerAfter - challengerBefore).to.equal(CHALLENGE_BOND + CHALLENGER_REWARD);
 
-      // The contract must still hold exactly the verifier's remaining stake
+      // The buyers' half is no longer pushed to a single address; it is held in
+      // the per-batch pool awaiting pro-rata claims (see DA3Features.test.js).
+      expect(await verifierStake.batchCompensationPool(1)).to.equal(COMPENSATION);
+
       const verifierInfo = await verifierStake.getVerifierInfo(verifier.address);
       expect(verifierInfo[0]).to.equal(MIN_STAKE - SLASHED);
-      expect(await verifierStake.getContractBalance()).to.equal(MIN_STAKE - SLASHED);
+
+      // Contract holds the remaining stake plus the unclaimed compensation pool.
+      expect(await verifierStake.getContractBalance()).to.equal(MIN_STAKE - SLASHED + COMPENSATION);
     });
   });
 

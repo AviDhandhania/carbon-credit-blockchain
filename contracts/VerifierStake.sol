@@ -14,8 +14,12 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
     CreditToken public immutable creditToken;
 
     uint256 public constant MIN_STAKE = 1 ether;
+    /// @notice Initial challenge window. Per-batch overrides may change it.
     uint256 public constant CHALLENGE_WINDOW = 90 days;
     uint256 public constant CHALLENGE_BOND = 0.1 ether;
+    /// @notice Bounds for configurable challenge windows (roadmap 2).
+    uint256 public constant MIN_CHALLENGE_WINDOW = 1 days;
+    uint256 public constant MAX_CHALLENGE_WINDOW = 365 days;
 
     struct VerifierInfo {
         uint256 stake;
@@ -42,6 +46,23 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
     uint256 public challengeCount;
     address public compensationPool;
 
+    // --- Roadmap 2: configurable / per-batch challenge window ---
+    /// @notice Window applied to batches without an explicit override.
+    uint256 public defaultChallengeWindow = CHALLENGE_WINDOW;
+    /// @notice Per-batch override; 0 means "use defaultChallengeWindow".
+    mapping(uint256 => uint256) public batchChallengeWindow;
+
+    // --- Roadmap 5: per-batch compensation pools with pro-rata claims ---
+    /// @notice Funds still available to claim for a batch.
+    mapping(uint256 => uint256) public batchCompensationPool;
+    /// @notice Total ever credited to a batch pool, used as the pro-rata base.
+    mapping(uint256 => uint256) public batchCompensationTotal;
+    /// @notice Batch supply at resolution time; the pro-rata denominator.
+    mapping(uint256 => uint256) public batchCompensationDenominator;
+    /// @notice Per-claimant token count already used to claim, so a repeat
+    /// claim is measured only against newly acquired tokens.
+    mapping(uint256 => mapping(address => uint256)) public compensationClaimedTokens;
+
     event StakeDeposited(address indexed verifier, uint256 amount);
     event StakeWithdrawn(address indexed verifier, uint256 amount);
     event StakeSlashed(address indexed verifier, uint256 amount, address indexed recipient);
@@ -58,6 +79,14 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
         address indexed recipient
     );
     event CompensationPoolUpdated(uint256 newBalance);
+    event DefaultChallengeWindowUpdated(uint256 newWindow);
+    event BatchChallengeWindowUpdated(uint256 indexed batchId, uint256 newWindow);
+    event CompensationPoolDeposited(
+        uint256 indexed batchId,
+        uint256 amount,
+        uint256 denominator
+    );
+    event CompensationClaimed(uint256 indexed batchId, address indexed claimant, uint256 amount);
 
     constructor(address _creditToken, address _compensationPool, address defaultAdmin) {
         creditToken = CreditToken(_creditToken);
@@ -98,7 +127,10 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
         require(msg.value >= CHALLENGE_BOND, "Minimum challenge bond is 0.1 ETH");
         require(bytes(evidenceHash).length > 0, "Evidence hash required");
         require(creditToken.getBatchVerifier(batchId) != address(0), "Batch not found");
-        require(block.timestamp <= creditToken.getBatchTimestamp(batchId) + CHALLENGE_WINDOW, "Challenge window expired");
+        require(
+            block.timestamp <= creditToken.getBatchTimestamp(batchId) + getChallengeWindow(batchId),
+            "Challenge window expired"
+        );
 
         uint256 challengeId = ++challengeCount;
         Challenge storage challenge = challenges[challengeId];
@@ -143,14 +175,23 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
             }
 
             // Bond is returned plus the challenger's half of the slashed stake;
-            // the other half goes to the compensation pool.
+            // the other half is held in a per-batch pool for the buyers who
+            // were left holding the fraudulent credits.
             payable(challenge.challenger).transfer(challenge.bond + challengerReward);
-            payable(compensationPool).transfer(compensationAmount);
+
+            // Roadmap 5: pro-rata pool instead of a single recipient address.
+            batchCompensationPool[challenge.batchId] += compensationAmount;
+            batchCompensationTotal[challenge.batchId] += compensationAmount;
+            batchCompensationDenominator[challenge.batchId] = creditToken.getBatchSupply(challenge.batchId);
 
             creditToken.flagBatch(challenge.batchId, true);
 
             emit StakeSlashed(verifier, slashedAmount, challenge.challenger);
-            emit CompensationPoolUpdated(address(compensationPool).balance);
+            emit CompensationPoolDeposited(
+                challenge.batchId,
+                compensationAmount,
+                batchCompensationDenominator[challenge.batchId]
+            );
         } else {
             payable(compensationPool).transfer(challenge.bond);
             emit CompensationPoolUpdated(address(compensationPool).balance);
@@ -199,6 +240,91 @@ contract VerifierStake is AccessControl, ReentrancyGuard {
 
     function hasActiveChallenges(address verifier) internal view returns (bool) {
         return activeChallengeCount[verifier] > 0;
+    }
+
+    // ------------------------------------------------------------------
+    // Roadmap 2: configurable challenge window
+    // ------------------------------------------------------------------
+
+    /// @notice Window that currently applies to a batch: its override if set,
+    /// otherwise the global default.
+    function getChallengeWindow(uint256 batchId) public view returns (uint256) {
+        uint256 override_ = batchChallengeWindow[batchId];
+        return override_ == 0 ? defaultChallengeWindow : override_;
+    }
+
+    function setDefaultChallengeWindow(uint256 window) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(
+            window >= MIN_CHALLENGE_WINDOW && window <= MAX_CHALLENGE_WINDOW,
+            "Window out of bounds"
+        );
+        defaultChallengeWindow = window;
+        emit DefaultChallengeWindowUpdated(window);
+    }
+
+    function setBatchChallengeWindow(
+        uint256 batchId,
+        uint256 window
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(creditToken.getBatchVerifier(batchId) != address(0), "Batch not found");
+        require(
+            window >= MIN_CHALLENGE_WINDOW && window <= MAX_CHALLENGE_WINDOW,
+            "Window out of bounds"
+        );
+        batchChallengeWindow[batchId] = window;
+        emit BatchChallengeWindowUpdated(batchId, window);
+    }
+
+    /// @notice Clears a per-batch override so the batch falls back to the default.
+    function clearBatchChallengeWindow(uint256 batchId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        batchChallengeWindow[batchId] = 0;
+        emit BatchChallengeWindowUpdated(batchId, defaultChallengeWindow);
+    }
+
+    // ------------------------------------------------------------------
+    // Roadmap 5: per-batch compensation, pro-rata by batch holdings
+    // ------------------------------------------------------------------
+
+    /**
+     * @notice Withdraw this sender's share of a slashed batch's compensation.
+     * @dev The share is measured against the supply snapshot taken when the
+     * challenge was resolved, so a holder who has since sold keeps only the
+     * share their remaining balance entitles them to. Tokens acquired after
+     * resolution are not claimable, and the denominator is frozen, so the pool
+     * cannot be drained for more than it holds.
+     */
+    function claimCompensation(uint256 batchId) external nonReentrant returns (uint256) {
+        uint256 total = batchCompensationTotal[batchId];
+        require(total > 0, "No compensation pool");
+        uint256 denominator = batchCompensationDenominator[batchId];
+        require(denominator > 0, "No compensation denominator");
+        // The verifier whose batch was flagged must not draw from the pool that
+        // exists to compensate the buyers it misled.
+        require(
+            creditToken.getBatchVerifier(batchId) != msg.sender,
+            "Verifier cannot claim compensation"
+        );
+
+        uint256 balance = creditToken.getUserBatchBalance(batchId, msg.sender);
+        uint256 alreadyClaimed = compensationClaimedTokens[batchId][msg.sender];
+        require(balance > alreadyClaimed, "Nothing to claim");
+
+        uint256 claimableTokens = balance - alreadyClaimed;
+        uint256 share = (total * claimableTokens) / denominator;
+        require(share > 0, "Claim amount too small");
+
+        uint256 available = batchCompensationPool[batchId];
+        if (share > available) {
+            share = available;
+        }
+        require(share > 0, "Compensation pool exhausted");
+
+        compensationClaimedTokens[batchId][msg.sender] = balance;
+        batchCompensationPool[batchId] = available - share;
+
+        payable(msg.sender).transfer(share);
+        emit CompensationClaimed(batchId, msg.sender, share);
+        return share;
     }
 
     function grantVerifierRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {

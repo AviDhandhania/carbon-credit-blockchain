@@ -11,6 +11,10 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
   const [withdrawForm, setWithdrawForm] = useState({ amount: '' });
   const [challengeForm, setChallengeForm] = useState({ batchId: '', evidenceHash: '' });
   const [resolveForm, setResolveForm] = useState({ challengeId: '', result: 'true' });
+  const [compForm, setCompForm] = useState({ batchId: '' });
+  const [compInfo, setCompInfo] = useState(null);
+  const [windowForm, setWindowForm] = useState({ batchId: '', days: '' });
+  const [defaultWindowDays, setDefaultWindowDays] = useState(null);
 
   useEffect(() => {
     if (provider && contractAddress && contractAddress !== '0x0000000000000000000000000000000000000000') {
@@ -54,10 +58,42 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
         }
       }
       setChallenges(allChallenges);
+
+      const defaultWindow = await contract.defaultChallengeWindow();
+      setDefaultWindowDays(Number(defaultWindow) / 86400);
     } catch (err) {
       console.error('Error loading verifier stake data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCompensation = async (batchId) => {
+    if (!contract || batchId === '' || batchId === null) return;
+    try {
+      const [pool, total, denominator, claimed] = await Promise.all([
+        contract.batchCompensationPool(batchId),
+        contract.batchCompensationTotal(batchId),
+        contract.batchCompensationDenominator(batchId),
+        contract.compensationClaimedTokens(batchId, account)
+      ]);
+      let holding = 0n;
+      try {
+        const token = new ethers.Contract(creditTokenAddress, creditTokenABI, signer || provider);
+        holding = await token.getUserBatchBalance(batchId, account);
+      } catch (e) {
+        // Credit token not reachable; leave the holding at zero.
+      }
+
+      setCompInfo({
+        pool: ethers.formatEther(pool),
+        total: ethers.formatEther(total),
+        denominator: ethers.formatUnits(denominator, 18),
+        claimedTokens: ethers.formatUnits(claimed, 18),
+        holding: ethers.formatUnits(holding, 18)
+      });
+    } catch (err) {
+      setCompInfo(null);
     }
   };
 
@@ -123,6 +159,61 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       setResolveForm({ challengeId: '', result: 'true' });
     } catch (err) {
       setError('Resolve failed: ' + err.message);
+    }
+  };
+
+  const handleClaimCompensation = async (e) => {
+    e.preventDefault();
+    if (!contract || !signer) return;
+    setError(null);
+    try {
+      const tx = await contract.claimCompensation(compForm.batchId);
+      await tx.wait();
+      loadData();
+      loadCompensation(compForm.batchId);
+    } catch (err) {
+      setError('Claim failed: ' + err.message);
+    }
+  };
+
+  const handleSetDefaultWindow = async (e) => {
+    e.preventDefault();
+    if (!contract || !signer) return;
+    setError(null);
+    try {
+      const seconds = Math.round(Number(windowForm.days) * 86400);
+      const tx = await contract.setDefaultChallengeWindow(seconds);
+      await tx.wait();
+      loadData();
+      setWindowForm({ ...windowForm, days: '' });
+    } catch (err) {
+      setError('Window update failed: ' + err.message);
+    }
+  };
+
+  const handleSetBatchWindow = async (e) => {
+    e.preventDefault();
+    if (!contract || !signer) return;
+    setError(null);
+    try {
+      const seconds = Math.round(Number(windowForm.days) * 86400);
+      const tx = await contract.setBatchChallengeWindow(windowForm.batchId, seconds);
+      await tx.wait();
+      loadData();
+    } catch (err) {
+      setError('Batch window update failed: ' + err.message);
+    }
+  };
+
+  const handleClearBatchWindow = async (batchId) => {
+    if (!contract || !signer) return;
+    setError(null);
+    try {
+      const tx = await contract.clearBatchChallengeWindow(batchId);
+      await tx.wait();
+      loadData();
+    } catch (err) {
+      setError('Clearing override failed: ' + err.message);
     }
   };
 
@@ -262,6 +353,95 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
         </div>
       </div>
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        <div>
+          <h3>Claim Buyer Compensation</h3>
+          <p style={{ fontSize: '0.85rem', color: '#666' }}>
+            When a challenge succeeds, the buyers' half of the slashed stake is held
+            per batch. Holders withdraw their pro-rata share here.
+          </p>
+          <form onSubmit={handleClaimCompensation}>
+            <div className="form-group">
+              <label>Batch ID</label>
+              <input
+                type="number"
+                value={compForm.batchId}
+                onChange={(e) => {
+                  setCompForm({ batchId: e.target.value });
+                  loadCompensation(e.target.value);
+                }}
+                placeholder="1"
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
+              {loading ? 'Claiming...' : 'Claim Compensation'}
+            </button>
+          </form>
+
+          {compInfo && (
+            <div className="status info" style={{ marginTop: '1rem', display: 'block' }}>
+              <div><strong>Pool remaining:</strong> {compInfo.pool} ETH</div>
+              <div><strong>Pool total:</strong> {compInfo.total} ETH</div>
+              <div><strong>Supply at resolution:</strong> {compInfo.denominator}</div>
+              <div><strong>Your holding:</strong> {compInfo.holding}</div>
+              <div><strong>Already claimed against:</strong> {compInfo.claimedTokens}</div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h3>Challenge Window (Admin)</h3>
+          <p style={{ fontSize: '0.85rem', color: '#666' }}>
+            Default window: {defaultWindowDays === null ? '-' : `${defaultWindowDays} days`}.
+            Bounds are 1 to 365 days.
+          </p>
+          <form onSubmit={handleSetDefaultWindow}>
+            <div className="form-group">
+              <label>New default window (days)</label>
+              <input
+                type="number"
+                step="1"
+                value={windowForm.days}
+                onChange={(e) => setWindowForm({ ...windowForm, days: e.target.value })}
+                placeholder="90"
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
+              Set Default Window
+            </button>
+          </form>
+
+          <form onSubmit={handleSetBatchWindow} style={{ marginTop: '1rem' }}>
+            <div className="form-group">
+              <label>Batch ID for override</label>
+              <input
+                type="number"
+                value={windowForm.batchId}
+                onChange={(e) => setWindowForm({ ...windowForm, batchId: e.target.value })}
+                placeholder="1"
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-secondary" disabled={loading || !signer}>
+              Set Per-Batch Window
+            </button>
+            {windowForm.batchId && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ marginLeft: '0.5rem' }}
+                onClick={() => handleClearBatchWindow(windowForm.batchId)}
+                disabled={loading || !signer}
+              >
+                Clear Override
+              </button>
+            )}
+          </form>
+        </div>
+      </div>
+
       <h3>All Challenges</h3>
       {loading ? (
         <div className="loading">Loading challenges...</div>
@@ -312,9 +492,10 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
 
       <div className="status info" style={{ marginTop: '1rem' }}>
         <strong>How it works:</strong> Verifiers must stake ≥1 ETH before approving projects. 
-        During the 90-day challenge window, anyone can challenge a batch with a 0.1 ETH bond and evidence. 
-        If the challenge succeeds, half the verifier's stake is slashed (half to challenger, half to compensation pool). 
-        If it fails, the challenger loses their bond.
+        During the challenge window (90 days by default, configurable per batch), anyone can challenge a batch
+        with a 0.1 ETH bond and evidence. Resolution is gated by the regulator multisig, so no single key can slash.
+        If the challenge succeeds, half the verifier's stake is slashed (half to the challenger, half into that
+        batch's pro-rata compensation pool for buyers). If it fails, the challenger loses their bond.
       </div>
     </div>
   );
