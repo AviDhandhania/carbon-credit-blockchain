@@ -161,12 +161,14 @@ By default the deployer's own regulator role is **revoked** at deploy time — t
 
 | Contract | Standard | Roles | Purpose |
 |----------|----------|-------|---------|
-| [`CreditToken.sol`](contracts/CreditToken.sol) | ERC-20 + burnable + AccessControl | `MINTER_ROLE`, `VERIFIER_ROLE` | Credits with per-batch tracking |
+| [`CreditToken.sol`](contracts/CreditToken.sol) | ERC-20 + burnable + AccessControl | `MINTER_ROLE`, `VERIFIER_ROLE` | Credits with per-batch tracking, fractionalization, optional MRV gate |
 | [`Marketplace.sol`](contracts/Marketplace.sol) | AccessControl + ReentrancyGuard | `BUYER_ROLE`, `MARKETPLACE_ADMIN_ROLE` | Listings, buying, price updates |
 | [`RetireAndCertify.sol`](contracts/RetireAndCertify.sol) | ERC-721 URI storage + AccessControl | `RETIRE_ROLE`, `REGULATOR_ROLE` | Burn credits, mint soulbound certificates |
-| [`VerifierStake.sol`](contracts/VerifierStake.sol) | AccessControl + ReentrancyGuard | `VERIFIER_ROLE`, `REGULATOR_ROLE`, `CHALLENGER_ROLE` | Stakes, challenges, slashing |
+| [`VerifierStake.sol`](contracts/VerifierStake.sol) | AccessControl + ReentrancyGuard | `VERIFIER_ROLE`, `REGULATOR_ROLE`, `CHALLENGER_ROLE` | Stakes, challenges, configurable windows, per-batch compensation |
+| [`RegulatorMultisig.sol`](contracts/RegulatorMultisig.sol) | Standalone threshold contract | panel owners | 3-of-5 gate on challenge resolution |
+| [`MockMRVOracle.sol`](contracts/MockMRVOracle.sol) | AccessControl (`IMRVOracle`) | `ORACLE_ADMIN_ROLE` | Settable MRV attestation stand-in |
 
-**CreditToken** mints a `Batch` per project (`projectId`, `verifier`, `ipfsHash`, `amount`, `timestamp`, `isFlagged`) and keeps `batchBalances[batchId][holder]` in sync on every transfer, so a credit bought on the marketplace is still traceable to the batch it came from. `retireBatch` / `retireBatchFrom` burn credits, and an admin can `flagBatch` a fraudulent batch to block it from being traded or retired.
+**CreditToken** mints a `Batch` per project (`projectId`, `verifier`, `ipfsHash`, `amount`, `timestamp`, `isFlagged`) and keeps `batchBalances[batchId][holder]` in sync on every transfer, so a credit bought on the marketplace is still traceable to the batch it came from. `retireBatch` / `retireBatchFrom` burn credits, and an admin can `flagBatch` a fraudulent batch to freeze it — no trading, retiring, or transfers, which is what keeps the compensation claimant set honest. `splitBatch` fractionalizes a batch supply-invariantly, and when an MRV oracle is wired in, `mintBatch` additionally requires an attested project with a matching evidence hash.
 
 **Marketplace** lets a holder list credits from a batch at a price in ETH. Buyers pay in one transaction; the contract transfers the credits and forwards the ETH to the seller, refunding any excess. Fully bought listings deactivate themselves.
 
@@ -192,7 +194,7 @@ React 18 + Vite 5 + ethers v6, wallet via MetaMask. One `BrowserProvider`/signer
 | Component | What it does |
 |-----------|--------------|
 | `WalletConnect.jsx` | Connect/disconnect, network badge, switch to Localhost or Sepolia |
-| `CreditTokenPanel.jsx` | Mint a batch, retire credits, list minted batches |
+| `CreditTokenPanel.jsx` | Mint a batch, retire credits, **split a batch**, list minted batches |
 | `MarketplacePanel.jsx` | Create/cancel listings, buy credits, view active and own listings |
 | `RetireCertifyPanel.jsx` | Retire credits and mint a soulbound certificate, view certificates |
 | `VerifierStakePanel.jsx` | Deposit/withdraw stake, open a challenge, claim buyer compensation, configure challenge windows |
