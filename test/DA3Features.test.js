@@ -76,6 +76,25 @@ describe("CreditToken: batch fractionalization", function () {
       .to.be.revertedWith("Batch is flagged");
   });
 
+  it("Should freeze a flagged batch against transfers", async function () {
+    await creditToken.flagBatch(1, true);
+    await expect(creditToken.connect(verifier).transfer(buyer1.address, 1n))
+      .to.be.revertedWith("Batch is flagged");
+    await expect(creditToken.connect(verifier).transfer(buyer1.address, INITIAL_AMOUNT))
+      .to.be.revertedWith("Batch is flagged");
+  });
+
+  it("Should allow transfers again once a batch is unflagged", async function () {
+    await creditToken.flagBatch(1, true);
+    await expect(creditToken.connect(verifier).transfer(buyer1.address, 1n))
+      .to.be.revertedWith("Batch is flagged");
+
+    await creditToken.flagBatch(1, false);
+    await creditToken.connect(verifier).transfer(buyer1.address, ethers.parseUnits("10", 18));
+    expect(await creditToken.getUserBatchBalance(1, buyer1.address))
+      .to.equal(ethers.parseUnits("10", 18));
+  });
+
   it("Should revert when splitting a fully retired batch", async function () {
     await creditToken.connect(verifier).retireBatch(1, INITIAL_AMOUNT);
 
@@ -422,14 +441,38 @@ describe("VerifierStake: per-batch compensation pool", function () {
       .to.be.revertedWith("No compensation pool");
   });
 
-  it("Should never pay out more than the pool holds", async function () {
-    // An address that acquires tokens after resolution still cannot overdraw.
-    await creditToken.connect(buyer1).transfer(outsider.address, BUYER1_AMOUNT);
+  it("Should freeze the batch so post-resolution buyers cannot claim", async function () {
+    // Resolving in the challenger's favour flags the batch, which freezes it.
+    // Acquiring credits after that must be impossible, so the set of claimants
+    // stays exactly the holders who were exposed at resolution time.
+    await expect(creditToken.connect(buyer1).transfer(outsider.address, BUYER1_AMOUNT))
+      .to.be.revertedWith("Batch is flagged");
 
+    expect(await creditToken.getUserBatchBalance(1, outsider.address)).to.equal(0);
+    await expect(verifierStake.connect(outsider).claimCompensation(1))
+      .to.be.revertedWith("Nothing to claim");
+
+    // The two genuine holders can still take the whole pool, and no more.
     await verifierStake.connect(buyer2).claimCompensation(1);
-    await verifierStake.connect(outsider).claimCompensation(1);
-
+    await verifierStake.connect(buyer1).claimCompensation(1);
     expect(await verifierStake.batchCompensationPool(1)).to.equal(0);
+  });
+
+  it("Should leave the other batches of a slashed verifier tradeable", async function () {
+    // Flagging must be per-batch: a verifier's unrelated batches stay liquid.
+    const other = await creditToken.connect(verifier).mintBatch.staticCall(
+      "PROJ-OTHER",
+      "QmOtherHash",
+      INITIAL_AMOUNT
+    );
+    await creditToken.connect(verifier).mintBatch("PROJ-OTHER", "QmOtherHash", INITIAL_AMOUNT);
+
+    expect(await creditToken.isBatchFlagged(1)).to.be.true;
+    expect(await creditToken.isBatchFlagged(other)).to.be.false;
+
+    await creditToken.connect(verifier).transfer(buyer1.address, ethers.parseUnits("10", 18));
+    expect(await creditToken.getUserBatchBalance(other, buyer1.address))
+      .to.equal(ethers.parseUnits("10", 18));
   });
 
   it("Should keep unclaimed compensation inside the contract", async function () {

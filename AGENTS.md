@@ -52,7 +52,7 @@ This repository contains the **design deliverables** for a blockchain-based carb
 # Smart Contract Development
 npm install                           # Install dependencies
 npx hardhat compile                   # Compile contracts
-npx hardhat test                      # Run tests (106 passing)
+npx hardhat test                      # Run tests (109 passing)
 npx hardhat node                      # Start local Hardhat node
 npx hardhat run scripts/deploy.js --network localhost  # Deploy locally (6 contracts)
 npx hardhat run scripts/deploy.js --network sepolia   # Deploy to Sepolia
@@ -73,7 +73,7 @@ pip install python-pptx python-docx matplotlib pillow  # Dependencies
 - **Report content lives in two places**: `docs/DA1_Report.md` AND `build_deliverables.py` — edit both or they drift
 - **Diagrams are generated** — do not edit PNGs directly; modify `diagrams/make_diagrams.py`
 - **Contract addresses** — Update `frontend/src/utils/contracts.js` after deployment
-- **Test coverage**: 106 passing tests covering all 6 contracts (CreditToken, Marketplace, RetireAndCertify, VerifierStake, RegulatorMultisig, MockMRVOracle)
+- **Test coverage**: 109 passing tests covering all 6 contracts (CreditToken, Marketplace, RetireAndCertify, VerifierStake, RegulatorMultisig, MockMRVOracle)
 - **Status is tracked in `PROGRESS.md`** — update it when you change what is built or verified
 
 ## Implementation Status (Complete)
@@ -85,7 +85,7 @@ pip install python-pptx python-docx matplotlib pillow  # Dependencies
 | **VerifierStake** | ✅ Done | Stakes, challenges, configurable per-batch windows, per-batch pro-rata compensation pools |
 | **RegulatorMultisig** | ✅ Done | 3-of-5 panel holds REGULATOR_ROLE; single-key regulation revoked at deploy |
 | **MockMRVOracle** | ✅ Done | Settable MRV attestation stand-in behind `IMRVOracle` |
-| **Tests** | ✅ Done | 106 passing tests (44 core + 62 DA3) |
+| **Tests** | ✅ Done | 109 passing tests (44 core + 65 DA3) |
 | **Frontend** | ✅ Done | React + Vite + MetaMask integration for all 6 contracts |
 | **Deployment** | ✅ Done | Hardhat deploy script, role wiring, multisig + oracle deployment |
 | **E2E check** | ✅ Done | `frontend/scripts/verify-integration.mjs`, 25 assertions against a live chain |

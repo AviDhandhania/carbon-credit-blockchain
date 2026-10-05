@@ -2,3 +2,13 @@ __pycache__/
 *.pyc
 .DS_Store
 node_modules/
+
+# Local run logs
+*.log
+
+# Hardhat build output — regenerate with `npx hardhat compile`
+artifacts/
+cache/
+
+# Frontend build output — regenerate with `npm run build`
+frontend/dist/

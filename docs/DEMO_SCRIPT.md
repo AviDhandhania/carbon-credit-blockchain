@@ -129,7 +129,7 @@
 > ✅ RegulatorMultisig — 3-of-5 panel gates every challenge resolution
 > ✅ MockMRVOracle — optional MRV attestation required before minting
 > ✅ React + Vite frontend talking to my **own local Hardhat node** through MetaMask
-> ✅ **106 automated tests passing** with `npx hardhat test`, covering happy paths, access control and revert cases
+> ✅ **109 automated tests passing** with `npx hardhat test`, covering happy paths, access control and revert cases
 > ✅ A **25-assertion end-to-end check** driving the deployed contracts through the same ABIs the frontend uses, so a broken ABI can't hide until the browser
 >
 > Deliberately out of scope, and why: a public-network deployment needs funded keys and is irreversible, a fiat on/off-ramp needs a payments vendor and KYC, and a real satellite MRV feed needs an off-chain data provider. The on-chain interface for that last one is already in place, so it is an adapter away.

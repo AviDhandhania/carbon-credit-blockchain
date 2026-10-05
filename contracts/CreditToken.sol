@@ -119,6 +119,13 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
                 list.pop();
                 continue;
             }
+            // A flagged batch is frozen: its credits cannot change hands. This
+            // keeps the compensation denominator from drifting after a
+            // successful challenge, so only the holders who were exposed when
+            // the batch was flagged can claim from its pool
+            // (see VerifierStake.claimCompensation).
+            require(!batches[batchId].isFlagged, "Batch is flagged");
+
             uint256 move = bal < remaining ? bal : remaining;
             batchBalances[batchId][from] = bal - move;
             if (batchBalances[batchId][to] == 0) {

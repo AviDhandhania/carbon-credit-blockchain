@@ -139,7 +139,7 @@ This report documents the **50% implementation (DA2)** of that design — a work
 
 **Framework**: Hardhat + Chai + ethers.js v6  
 **Coverage**: 44 passing tests across 4 contract suites (this suite). The repository total is now
-106 passing after the DA3 additions — see [`PROGRESS.md`](../PROGRESS.md).
+109 passing after the DA3 additions — see [`PROGRESS.md`](../PROGRESS.md).
 
 | Test Suite | Tests | Coverage |
 |------------|-------|----------|
