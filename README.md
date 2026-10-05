@@ -13,7 +13,8 @@ The part we have not found elsewhere is what happens when the data going in is a
 | | |
 |---|---|
 | **DA1 — design** | Complete: report, presentation, diagrams |
-| **DA2 — core implementation** | 4 smart contracts, test suite, React frontend, deploy script |
+| **DA2 — core implementation** | 4 core contracts + 2 governance contracts, test suite, React frontend, deploy script |
+| **DA3 — verification & hygiene** | 109 tests, ABI-level E2E, headless-Chrome UI check, repo cleaned to source-only |
 | **DA3 — roadmap features** | Regulator multisig, configurable windows, MRV oracle, fractionalization, pro-rata compensation |
 
 Live status, roadmap tracker and known limitations: **[`PROGRESS.md`](PROGRESS.md)**.
@@ -80,7 +81,7 @@ Three terminals. **The node must stay open** — the chain lives in memory, so c
 # Terminal 1 — local chain on 127.0.0.1:8545 (chain ID 31337)
 npm run node
 
-# Terminal 2 — deploy the 4 contracts and grant roles
+# Terminal 2 — deploy the 6 contracts and grant roles
 npm run deploy:local
 
 # Terminal 3 — frontend at http://localhost:3000
@@ -95,8 +96,10 @@ On a fresh chain the deploy script always produces these addresses:
 | Marketplace | `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512` |
 | RetireAndCertify | `0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0` |
 | VerifierStake | `0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9` |
+| RegulatorMultisig | `0xa513E6E4b8f2a923D98304ec87F64353C4D5C853` |
+| MockMRVOracle | `0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6` |
 
-These are already filled into [`frontend/src/utils/contracts.js`](frontend/src/utils/contracts.js). They are derived from the deployer's nonce, so if you deploy a second time on the **same** running node the addresses shift (nonces 5–8 on the second run) and `contracts.js` must be updated to match.
+These are already filled into [`frontend/src/utils/contracts.js`](frontend/src/utils/contracts.js). They are derived from the deployer's nonce, so if you deploy a second time on the **same** running node the addresses shift and `contracts.js` must be updated to match. The first four are deployed before the role-grant transactions, which is why they stay stable across deployments.
 
 ## 4. Connect MetaMask
 
@@ -133,7 +136,22 @@ npm run deploy:sepolia
 npm run verify:sepolia -- <address> <constructor args>
 ```
 
-`COMPENSATION_POOL` (optional) sets the address that receives slashed stakes. It defaults to the deployer. Point it at an address you can actually withdraw from — not at another protocol contract.
+`COMPENSATION_POOL` (optional) sets the address that receives the bonds of *failed* challenges. It defaults to the deployer. Point it at an address you can actually withdraw from — not at another protocol contract. (The buyers' half of a *successful* slash no longer goes there at all: it is held per batch and claimed pro-rata via `claimCompensation`.)
+
+Other deploy-time switches:
+
+```bash
+# Custom panel instead of the default first-five-Hardhat-accounts
+MULTISIG_OWNERS=0xabc...,0xdef...,0x123...,0x456...,0x789... MULTISIG_THRESHOLD=3 npm run deploy:local
+
+# Require MRV attestation before minting (oracle is deployed either way)
+USE_MRV_ORACLE=true npm run deploy:local
+
+# Demo convenience: keep the deployer's single-key regulator role (defeats the point)
+KEEP_DEPLOYER_REGULATOR=true npm run deploy:local
+```
+
+By default the deployer's own regulator role is **revoked** at deploy time — the 3-of-5 panel becomes the only path to a resolution. Note this affects the walkthrough below: step 9 needs three accounts.
 
 ---
 
@@ -193,7 +211,9 @@ React 18 + Vite 5 + ethers v6, wallet via MetaMask. One `BrowserProvider`/signer
 9. 🏛️ **Regulator Multisig** → *Propose Resolution* → challenge `1`, *Challenger Wins*. Then approve it from **three different accounts**: switch MetaMask to accounts #1 and #2 and hit *Approve*. The resolution fires automatically on the third approval — the verifier's stake drops to 0.5 ETH, the batch is flagged, and the challenger is paid their bond plus a quarter of the slash. (Trying to resolve directly as the deployer now reverts, which is the point.)
 10. 🛡️ **VerifierStake** → under *Claim Buyer Compensation*, enter batch `1` to see the pool. If that batch spread across accounts it pays each holder pro-rata; the verifier who was slashed is rejected.
 
-Note that once a batch is flagged in step 9 it can no longer be listed or retired — that is the point of flagging, so resolve as *Verifier Wins* instead if you want to keep trading that batch.
+Note that once a batch is flagged in step 9 it is **frozen**: no more listings, retirements, or transfers — so the buyers who held it when it was flagged are exactly the ones who can claim its compensation pool. That is the point of flagging, so resolve as *Verifier Wins* instead if you want to keep trading that batch.
+
+Fraudulent-verification integrity aside, the same panels expose the DA3 controls: **Split Batch** (fractionalize a vintage without minting), **Challenge Window** (1–365 days, globally or per batch), and the optional MRV gate on minting.
 
 If you would rather demo the single-key flow, deploy with `KEEP_DEPLOYER_REGULATOR=true`.
 
@@ -249,18 +269,29 @@ Build output is **not** committed — `artifacts/`, `cache/` and `frontend/dist/
 regenerated by `npx hardhat compile` and `npm run build`. That keeps the repository to source and docs.
 
 ```
-├── contracts/                     # Solidity 0.8.20 (viaIR, optimizer 200 runs)
-├── test/                          # 109 tests across the core and DA3 suites
+├── contracts/
+│   ├── interfaces/IMRVOracle.sol  # MRV oracle interface
+│   ├── CreditToken.sol            # ERC-20, batch tracking, fractionalization, MRV gate
+│   ├── Marketplace.sol            # listings, purchases, price updates
+│   ├── MockMRVOracle.sol          # settable MRV attestation stand-in
+│   ├── RegulatorMultisig.sol      # 3-of-5 threshold gate for challenge resolution
+│   ├── RetireAndCertify.sol       # burn + soulbound ERC-721 certificates
+│   └── VerifierStake.sol          # stakes, challenges, windows, pro-rata pools
+├── test/
+│   ├── CarbonCredit.test.js       # 44 tests, core contracts
+│   └── DA3Features.test.js        # 65 tests, DA3 features
 ├── scripts/deploy.js              # deploys 6 contracts + grants/revokes roles
 ├── PROGRESS.md                    # status, roadmap tracker, known limitations
-├── frontend/                      # React + Vite frontend
+├── frontend/
+│   ├── scripts/
+│   │   ├── verify-integration.mjs # 25 ABI-level assertions against a live chain
+│   │   └── browser-check.mjs      # 13 UI assertions in headless Chrome + screenshot
 │   └── src/
-│       ├── components/            # one panel per module
-│       ├── scripts/               # verify-integration.mjs + browser-check.mjs
+│       ├── components/            # one panel per module (6 total)
 │       ├── utils/contracts.js     # addresses & ABIs
 │       └── App.jsx                # wallet connection
 ├── diagrams/                      # generated PNGs + make_diagrams.py
-├── docs/                          # DA1 and DA2 reports
+├── docs/                          # DA1/DA2 reports, demo script
 ├── presentation/                  # DA1 slides
 ├── build_deliverables.py          # rebuilds the DA1 .docx/.pptx
 ├── hardhat.config.js
@@ -281,4 +312,4 @@ Note: the report text lives in two places, `docs/DA1_Report.md` and `build_deliv
 
 Implemented in DA2: Solidity 0.8.20 with OpenZeppelin 5 (ERC-20, ERC-721, AccessControl, ReentrancyGuard), Hardhat 2, Chai + ethers v6 for tests, React 18 + Vite 5 + ethers v6 for the frontend, MetaMask for signing, and the Hardhat local chain / Sepolia for deployment.
 
-Still planned: IPFS pinning (only content hashes are used today), a Layer 2 (Polygon or Arbitrum) for production, and the DA3 items listed in Section 4 of the DA2 report — multi-sig regulator, configurable challenge windows, MRV oracles and fiat on/off-ramps.
+Still planned: IPFS pinning (only content hashes are used today), a Layer 2 (Polygon or Arbitrum) for production, and a fiat on/off-ramp — the last needs a payments vendor and KYC. Everything from the DA2 report's roadmap that could be built in-repo is implemented (see [`PROGRESS.md`](PROGRESS.md)).
