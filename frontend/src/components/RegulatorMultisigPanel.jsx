@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { diagnostics } from '../utils/diagnostics';
 
 function RegulatorMultisigPanel({ provider, signer, account, contractAddress, contractABI }) {
   const [contract, setContract] = useState(null);
@@ -35,7 +36,7 @@ function RegulatorMultisigPanel({ provider, signer, account, contractAddress, co
         isOwner: account ? await c.isOwner(account) : false
       });
     } catch (err) {
-      console.error('Error loading multisig data:', err);
+      diagnostics.contractError('RegulatorMultisigPanel.loadData', err);
       setError('Failed to read the regulator panel: ' + err.message);
     } finally {
       setLoading(false);
@@ -56,6 +57,7 @@ function RegulatorMultisigPanel({ provider, signer, account, contractAddress, co
         approvedByMe
       });
     } catch (err) {
+      diagnostics.expectedMiss('proposal lookup', err);
       setProposal(null);
     }
   };

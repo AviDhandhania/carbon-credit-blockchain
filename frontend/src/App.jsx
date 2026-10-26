@@ -6,6 +6,8 @@ import MarketplacePanel from './components/MarketplacePanel';
 import RetireCertifyPanel from './components/RetireCertifyPanel';
 import VerifierStakePanel from './components/VerifierStakePanel';
 import RegulatorMultisigPanel from './components/RegulatorMultisigPanel';
+import ErrorBanner from './components/ErrorBanner';
+import { diagnostics } from './utils/diagnostics';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from './utils/contracts';
 
 function App() {
@@ -35,6 +37,7 @@ function App() {
       setAccount(accounts[0]);
       setChainId(Number(network.chainId));
     } catch (err) {
+      diagnostics.walletError('connectWallet', err);
       setError('Failed to connect wallet: ' + err.message);
     } finally {
       setIsConnecting(false);
@@ -57,6 +60,7 @@ function App() {
         params: [{ chainId: `0x${targetChainId.toString(16)}` }],
       });
     } catch (err) {
+      diagnostics.walletError('switchNetwork', err);
       if (err.code === 4902) {
         // Chain not added, add it
         const chainParams = {
@@ -118,6 +122,7 @@ function App() {
 
   return (
     <div className="container">
+      <ErrorBanner />
       <header className="header">
         <h1>🌿 Carbon Credit Trading System</h1>
         <p>Blockchain-based carbon credit marketplace with verifier staking, panel-gated disputes and soulbound certificates</p>

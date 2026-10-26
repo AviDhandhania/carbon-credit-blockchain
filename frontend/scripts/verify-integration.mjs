@@ -60,8 +60,16 @@ async function main() {
   }
   // build(overrides) must return the transaction promise.
   async function exec(wallet, build) {
-    const tx = await build({ nonce: await nextNonce(wallet.address) });
-    await tx.wait();
+    const nonce = await nextNonce(wallet.address);
+    try {
+      const tx = await build({ nonce });
+      await tx.wait();
+    } catch (err) {
+      // A failed send may or may not have consumed the nonce. Re-read it from the
+      // chain next time instead of cascading through every later assertion.
+      nonces.delete(wallet.address);
+      throw err;
+    }
   }
 
   const tokenFor = (w) =>

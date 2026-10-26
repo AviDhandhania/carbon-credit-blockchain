@@ -1,0 +1,45 @@
+run	exit	wall_ms	started_at	script	args
+sweep__vus10__r1	0	271403	2026-10-22T06:29:38Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=10 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus10__r2	0	271683	2026-10-22T06:34:10Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=10 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus10__r3	0	271399	2026-10-22T06:38:42Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=10 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus50__r1	0	271160	2026-10-22T06:43:17Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=50 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus50__r2	0	271535	2026-10-22T06:47:51Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=50 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus50__r3	0	271655	2026-10-22T06:52:26Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=50 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus100__r1	0	271439	2026-10-22T06:56:58Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=100 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus100__r2	0	271406	2026-10-22T07:01:33Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=100 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus100__r3	0	271345	2026-10-22T07:06:05Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=100 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus250__r1	0	274537	2026-10-22T07:10:39Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=250 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus250__r2	0	274621	2026-10-22T07:15:17Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=250 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus250__r3	0	275128	2026-10-22T07:19:55Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=250 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus500__r1	99	279887	2026-10-22T07:24:33Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=500 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus500__r2	99	280860	2026-10-22T07:29:16Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=500 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus500__r3	99	280382	2026-10-22T07:34:00Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=500 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus1000__r1	99	281973	2026-10-22T07:38:41Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=1000 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus1000__r2	99	281464	2026-10-22T07:43:23Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=1000 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+sweep__vus1000__r3	99	281419	2026-10-22T07:48:05Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env TARGET_VUS=1000 --env WARMUP=60s --env MEASURE=180s --env COOLDOWN=30s
+baseline__baseline__r1	0	13143	2026-10-22T07:52:47Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/baseline.js	--env MODE=baseline --env TARGET_VUS=10 --env ITERATIONS=20
+baseline__baseline__r2	0	12272	2026-10-22T07:53:01Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/baseline.js	--env MODE=baseline --env TARGET_VUS=10 --env ITERATIONS=20
+baseline__baseline__r3	0	12014	2026-10-22T07:53:13Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/baseline.js	--env MODE=baseline --env TARGET_VUS=10 --env ITERATIONS=20
+baseline__nostake__r1	0	8508	2026-10-22T07:53:26Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/baseline.js	--env MODE=nostake --env TARGET_VUS=10 --env ITERATIONS=20
+baseline__nostake__r2	0	8555	2026-10-22T07:53:35Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/baseline.js	--env MODE=nostake --env TARGET_VUS=10 --env ITERATIONS=20
+baseline__nostake__r3	0	8388	2026-10-22T07:53:44Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/baseline.js	--env MODE=nostake --env TARGET_VUS=10 --env ITERATIONS=20
+baseline__stake__r1	0	9005	2026-10-22T07:53:53Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/baseline.js	--env MODE=stake --env TARGET_VUS=10 --env ITERATIONS=20
+baseline__stake__r2	0	8383	2026-10-22T07:54:02Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/baseline.js	--env MODE=stake --env TARGET_VUS=10 --env ITERATIONS=20
+baseline__stake__r3	0	8580	2026-10-22T07:54:11Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/baseline.js	--env MODE=stake --env TARGET_VUS=10 --env ITERATIONS=20
+staking__A__r1	0	2235	2026-10-22T07:54:20Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=A --env TARGET_VUS=5 --env ITERATIONS=8
+staking__A__r2	0	2436	2026-10-22T07:54:23Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=A --env TARGET_VUS=5 --env ITERATIONS=8
+staking__A__r3	0	2230	2026-10-22T07:54:25Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=A --env TARGET_VUS=5 --env ITERATIONS=8
+staking__B__r1	0	4642	2026-10-22T07:54:28Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=B --env TARGET_VUS=5 --env ITERATIONS=8
+staking__B__r2	0	4998	2026-10-22T07:54:33Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=B --env TARGET_VUS=5 --env ITERATIONS=8
+staking__B__r3	0	4772	2026-10-22T07:54:39Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=B --env TARGET_VUS=5 --env ITERATIONS=8
+staking__C__r1	0	4538	2026-10-22T07:54:44Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=C --env TARGET_VUS=5 --env ITERATIONS=8
+staking__C__r2	0	4359	2026-10-22T07:54:49Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=C --env TARGET_VUS=5 --env ITERATIONS=8
+staking__C__r3	0	4647	2026-10-22T07:54:54Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=C --env TARGET_VUS=5 --env ITERATIONS=8
+staking__D__r1	0	761	2026-10-22T07:54:59Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=D --env TARGET_VUS=5 --env ITERATIONS=2
+staking__D__r2	0	773	2026-10-22T07:55:00Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=D --env TARGET_VUS=5 --env ITERATIONS=2
+staking__D__r3	0	820	2026-10-22T07:55:01Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/staking.js	--env SCENARIO=D --env TARGET_VUS=5 --env ITERATIONS=2
+stress__r1	99	580666	2026-10-22T07:55:02Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env SHAPE=stress
+stress__r2	99	582079	2026-10-22T08:04:46Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env SHAPE=stress
+spike__r1	99	575137	2026-10-22T08:14:32Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env SHAPE=spike
+spike__r2	99	573631	2026-10-22T08:24:10Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env SHAPE=spike
+endurance__r1	0	1861544	2026-10-22T08:33:47Z	/c/Users/SHIVESH KUMAR/Desktop/carbon-credit-blockchain/loadtest/sweep.js	--env SHAPE=endurance

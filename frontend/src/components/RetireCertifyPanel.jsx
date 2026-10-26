@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { diagnostics } from '../utils/diagnostics';
 
 function RetireCertifyPanel({ provider, signer, account, contractAddress, contractABI, creditTokenAddress, creditTokenABI }) {
   const [contract, setContract] = useState(null);
@@ -42,7 +43,7 @@ function RetireCertifyPanel({ provider, signer, account, contractAddress, contra
       }
       setCertificates(certList);
     } catch (err) {
-      console.error('Error loading certificates:', err);
+      diagnostics.contractError('RetireCertifyPanel.loadData', err);
     } finally {
       setLoading(false);
     }
@@ -69,6 +70,7 @@ function RetireCertifyPanel({ provider, signer, account, contractAddress, contra
       loadData();
       setRetireForm({ batchId: '', amount: '', metadataURI: '' });
     } catch (err) {
+      diagnostics.txError('retireAndCertify', err);
       setError('Retire & Certify failed: ' + err.message);
     }
   };

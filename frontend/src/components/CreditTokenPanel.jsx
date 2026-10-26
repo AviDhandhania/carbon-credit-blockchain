@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { diagnostics } from '../utils/diagnostics';
 
 function CreditTokenPanel({ provider, signer, account, contractAddress, contractABI }) {
   const [contract, setContract] = useState(null);
@@ -48,7 +49,7 @@ function CreditTokenPanel({ provider, signer, account, contractAddress, contract
       }));
       setBatches(batchList);
     } catch (err) {
-      console.error('Error loading CreditToken data:', err);
+      diagnostics.contractError('CreditTokenPanel.loadData', err);
     } finally {
       setLoading(false);
     }
@@ -68,6 +69,7 @@ function CreditTokenPanel({ provider, signer, account, contractAddress, contract
       loadData();
       setMintForm({ projectId: '', ipfsHash: '', amount: '' });
     } catch (err) {
+      diagnostics.txError('mintBatch', err);
       setError('Mint failed: ' + err.message);
     }
   };
@@ -85,6 +87,7 @@ function CreditTokenPanel({ provider, signer, account, contractAddress, contract
       loadData();
       setRetireForm({ batchId: '', amount: '' });
     } catch (err) {
+      diagnostics.txError('retireBatch', err);
       setError('Retire failed: ' + err.message);
     }
   };
@@ -105,6 +108,7 @@ function CreditTokenPanel({ provider, signer, account, contractAddress, contract
       loadData();
       setSplitForm({ batchId: '', amount: '', projectId: '' });
     } catch (err) {
+      diagnostics.txError('splitBatch', err);
       setError('Split failed: ' + err.message);
     }
   };

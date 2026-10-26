@@ -1,0 +1,159 @@
+{
+  "__comment": "Importable Grafana dashboard covering the ten panels required by the experiment specification §12. Datasource: a Prometheus that scrapes k6's prometheus remote-write output. Feed it with: k6 run --out experimental-prometheus-rw loadtest/sweep.js (set K6_PROMETHEUS_RW_SERVER_URL), which exports the built-in metrics plus the harness's custom ones (send_ok, mined_ok, mined_revert, gas_used, confirm_ms). Panels 8 and 9 use node_exporter metrics for the host running the chain node. Metric names follow k6's Prometheus exporter; if a custom metric is absent in your k6 build the panel is empty rather than wrong — see docs/Research_Paper_Experiments.md §Grafana.",
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "title": "Carbon-credit blockchain — k6 load & stress experiment",
+  "uid": "carbon-credit-k6",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-4h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {}
+      }
+    ]
+  },
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "1. Concurrent users and average latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [
+        { "matcher": { "id": "byName", "options": "VUs" }, "properties": [ { "id": "unit", "value": "short" }, { "id": "custom.axisPlacement", "value": "right" } ] }
+      ] },
+      "targets": [
+        { "refId": "A", "legendFormat": "average latency", "expr": "avg(k6_http_req_duration_avg)" },
+        { "refId": "B", "legendFormat": "VUs", "expr": "max(k6_vus)" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "2. Concurrent users and p95 latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "legendFormat": "p95 latency", "expr": "max(k6_http_req_duration_p95)" },
+        { "refId": "B", "legendFormat": "p99 latency", "expr": "max(k6_http_req_duration_p99)" },
+        { "refId": "C", "legendFormat": "VUs", "expr": "max(k6_vus)" }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "3. Throughput (requests/second)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "legendFormat": "all requests", "expr": "sum(rate(k6_http_reqs_total[1m]))" },
+        { "refId": "B", "legendFormat": "reads", "expr": "sum(rate(k6_http_reqs_total{op=\"read\"}[1m]))" },
+        { "refId": "C", "legendFormat": "buys", "expr": "sum(rate(k6_http_reqs_total{op=\"buy\"}[1m]))" }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "4. Error rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "percent" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "legendFormat": "failed HTTP/RPC", "expr": "max(k6_http_req_failed_rate) * 100" },
+        { "refId": "B", "legendFormat": "failed RPC calls", "expr": "(1 - max(k6_rpc_ok_rate)) * 100" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "5. Success rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "legendFormat": "success rate", "expr": "(1 - max(k6_http_req_failed_rate)) * 100" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "6. Gas consumption by operation",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "legendFormat": "mintBatch ({{op}})", "expr": "avg by (op) (k6_gas_used_avg)" },
+        { "refId": "B", "legendFormat": "buyTokens ({{op}})", "expr": "max by (op) (k6_gas_used_p95)" }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "7. Transaction confirmation time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "legendFormat": "confirm avg ({{op}})", "expr": "avg by (op) (k6_confirm_ms_avg)" },
+        { "refId": "B", "legendFormat": "confirm p95 ({{op}})", "expr": "max by (op) (k6_confirm_ms_p95)" }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "8. CPU utilisation",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "percent" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "legendFormat": "system CPU", "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)" },
+        { "refId": "B", "legendFormat": "chain node CPU", "expr": "sum(rate(process_cpu_seconds_total{job=\"hardhat-node\"}[1m])) * 100" }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "9. Memory utilisation",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "legendFormat": "chain node RSS", "expr": "process_resident_memory_bytes{job=\"hardhat-node\"}" },
+        { "refId": "B", "legendFormat": "system used", "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes" }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "10. Successful vs failed transactions",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "refId": "A", "legendFormat": "mined, status 1", "expr": "sum(rate(k6_mined_ok_total[1m]))" },
+        { "refId": "B", "legendFormat": "mined but reverted", "expr": "sum(rate(k6_mined_revert_total[1m]))" },
+        { "refId": "C", "legendFormat": "rejected / no receipt", "expr": "sum(rate(k6_send_fail_total[1m])) + sum(rate(k6_no_receipt_total[1m]))" },
+        { "refId": "D", "legendFormat": "VUs", "expr": "max(k6_vus)" }
+      ]
+    }
+  ]
+}

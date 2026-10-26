@@ -1,0 +1,155 @@
+{
+    "metrics": {
+        "vus": {
+            "value": 25,
+            "min": 0,
+            "max": 25
+        },
+        "http_reqs": {
+            "count": 16856,
+            "rate": 278.75536747131383
+        },
+        "http_req_tls_handshaking": {
+            "max": 0,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0
+        },
+        "checks": {
+            "passes": 6321,
+            "fails": 0,
+            "value": 1
+        },
+        "http_req_blocked": {
+            "max": 1.612,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.004150373754152821,
+            "min": 0,
+            "med": 0
+        },
+        "http_req_waiting": {
+            "p(90)": 68.8353,
+            "p(95)": 79.333325,
+            "avg": 40.764747947318455,
+            "min": 0,
+            "med": 42.029250000000005,
+            "max": 170.2413
+        },
+        "data_sent": {
+            "count": 5035730,
+            "rate": 83278.166032055
+        },
+        "iteration_duration": {
+            "p(90)": 707.5495000000001,
+            "p(95)": 763.6291899999998,
+            "avg": 530.4358832463217,
+            "min": 220.7695,
+            "med": 572.4848,
+            "max": 878.2149
+        },
+        "http_req_failed": {
+            "passes": 0,
+            "fails": 16856,
+            "thresholds": {
+                "rate<0.01": false
+            },
+            "value": 0
+        },
+        "http_req_duration{expected_response:true}": {
+            "max": 170.6641,
+            "p(90)": 69.19495,
+            "p(95)": 79.662075,
+            "avg": 41.145943391077196,
+            "min": 0,
+            "med": 42.374300000000005
+        },
+        "http_req_receiving": {
+            "max": 3.5575,
+            "p(90)": 0.9291,
+            "p(95)": 1.0016,
+            "avg": 0.36528313360227865,
+            "min": 0,
+            "med": 0.33805
+        },
+        "iterations": {
+            "count": 2107,
+            "rate": 34.84442093391423
+        },
+        "rpc_ok": {
+            "passes": 16856,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "data_received": {
+            "count": 9593171,
+            "rate": 158646.64851211148
+        },
+        "vus_max": {
+            "value": 25,
+            "min": 25,
+            "max": 25
+        },
+        "http_req_connecting": {
+            "max": 1.612,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.0012013289036544852,
+            "min": 0,
+            "med": 0
+        },
+        "http_req_duration": {
+            "avg": 41.145943391077196,
+            "min": 0,
+            "med": 42.374300000000005,
+            "max": 170.6641,
+            "p(90)": 69.19495,
+            "p(95)": 79.662075,
+            "thresholds": {
+                "p(95)<250": false
+            }
+        },
+        "http_req_sending": {
+            "max": 6.0397,
+            "p(90)": 0,
+            "p(95)": 0,
+            "avg": 0.0159123101566208,
+            "min": 0,
+            "med": 0
+        }
+    },
+    "root_group": {
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "totalSupply ok": {
+                    "name": "totalSupply ok",
+                    "path": "::totalSupply ok",
+                    "id": "f9bf83d3ade64c03e0ee22afcb327627",
+                    "passes": 2107,
+                    "fails": 0
+                },
+                "getBatchInfo ok": {
+                    "name": "getBatchInfo ok",
+                    "path": "::getBatchInfo ok",
+                    "id": "14bf92cb882b61aaca2588b86cd72e6f",
+                    "passes": 2107,
+                    "fails": 0
+                },
+                "chain responding": {
+                    "name": "chain responding",
+                    "path": "::chain responding",
+                    "id": "86aec5cb08e082eb477505fedce05acf",
+                    "passes": 2107,
+                    "fails": 0
+                }
+            },
+        "name": "",
+        "path": ""
+    }
+}

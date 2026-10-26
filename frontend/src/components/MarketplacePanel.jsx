@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { diagnostics } from '../utils/diagnostics';
 
 function MarketplacePanel({ provider, signer, account, contractAddress, contractABI, creditTokenAddress, creditTokenABI }) {
   const [contract, setContract] = useState(null);
@@ -47,7 +48,7 @@ function MarketplacePanel({ provider, signer, account, contractAddress, contract
             });
           }
         } catch (e) {
-          // Listing might not exist
+          diagnostics.expectedMiss(`listing ${listingId} lookup`, e);
         }
       }
       setListings(activeListings);
@@ -68,10 +69,10 @@ function MarketplacePanel({ provider, signer, account, contractAddress, contract
         }
         setUserListings(ul);
       } catch (e) {
-        // No user listings
+        diagnostics.expectedMiss('user listings lookup', e);
       }
     } catch (err) {
-      console.error('Error loading marketplace data:', err);
+      diagnostics.contractError('MarketplacePanel.loadData', err);
     } finally {
       setLoading(false);
     }
@@ -99,6 +100,7 @@ function MarketplacePanel({ provider, signer, account, contractAddress, contract
       loadData();
       setCreateForm({ batchId: '', amount: '', price: '' });
     } catch (err) {
+      diagnostics.txError('createListing', err);
       setError('Create listing failed: ' + err.message);
     }
   };
@@ -121,6 +123,7 @@ function MarketplacePanel({ provider, signer, account, contractAddress, contract
       loadData();
       setBuyForm({ listingId: '', amount: '' });
     } catch (err) {
+      diagnostics.txError('buyTokens', err);
       setError('Purchase failed: ' + err.message);
     }
   };
@@ -133,6 +136,7 @@ function MarketplacePanel({ provider, signer, account, contractAddress, contract
       await tx.wait();
       loadData();
     } catch (err) {
+      diagnostics.txError('cancelListing', err);
       setError('Cancel failed: ' + err.message);
     }
   };

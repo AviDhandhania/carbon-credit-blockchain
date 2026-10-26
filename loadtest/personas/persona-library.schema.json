@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Carbon-credit simulated user persona",
+  "description": "Maps the fields MiroFish's oasis_profile_generator produces (name, bio, age, gender, mbti, country, profession, interested_topics) onto a harness role, journey list and behavioural knobs. Phase 4.1 emits these; the harness consumes them.",
+  "type": "object",
+  "required": ["version", "generatedBy", "personas"],
+  "properties": {
+    "version": { "const": 1 },
+    "generatedBy": {
+      "type": "string",
+      "description": "How the personas were produced: 'mirofish' | 'llm' | 'handwritten'"
+    },
+    "personas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "profession", "role", "journeys"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "name": { "type": "string" },
+          "bio": { "type": "string", "description": "MiroFish field: free-text background used as the agent's identity" },
+          "age": { "type": "integer", "minimum": 18, "maximum": 90 },
+          "gender": { "type": "string" },
+          "mbti": { "type": "string", "description": "MiroFish field; drives risk appetite in the mapping below" },
+          "country": { "type": "string" },
+          "profession": { "type": "string" },
+          "interested_topics": { "type": "array", "items": { "type": "string" } },
+          "role": {
+            "enum": ["developer", "verifier", "buyer", "regulator"],
+            "description": "Which on-chain actor this persona acts as; determines the wallet's granted roles in setup-roles.js"
+          },
+          "journeys": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "developer-mint-split",
+                "verifier-stake-challenge-window",
+                "buyer-list-buy-retire-certify",
+                "compensation-claim-after-slash",
+                "regulator-3of5-resolution",
+                "negative-permissions",
+                "negative-boundaries",
+                "race-two-buyers-one-listing"
+              ]
+            }
+          },
+          "behaviour": {
+            "type": "object",
+            "properties": {
+              "riskTolerance": { "type": "number", "minimum": 0, "maximum": 1 },
+              "maxTx": { "type": "integer", "minimum": 1, "description": "Per-session transaction budget" },
+              "maxEth": { "type": "number", "minimum": 0 },
+              "retries": { "type": "integer", "minimum": 0, "maximum": 5 },
+              "abortOnError": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

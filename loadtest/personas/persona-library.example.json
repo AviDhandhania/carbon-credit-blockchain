@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "generatedBy": "handwritten",
+  "_note": "Placeholder personas covering all four roles and every journey in the schema. Phase 4.1 replaces this file with MiroFish/LLM-generated personas of the same shape; the harness reads either.",
+  "personas": [
+    {
+      "id": "dev-arun",
+      "name": "Arun Menon",
+      "bio": "Runs a 400-hectare reforestation project in Kerala. Technically fluent, impatient with paperwork, wants credits issued fast but keeps evidence files tidy because buyers ask for them.",
+      "age": 41,
+      "gender": "male",
+      "mbti": "ESTJ",
+      "country": "India",
+      "profession": "Project developer, reforestation",
+      "interested_topics": ["MRV", "verification cost", "batch provenance"],
+      "role": "developer",
+      "journeys": ["developer-mint-split", "negative-boundaries"],
+      "behaviour": { "riskTolerance": 0.4, "maxTx": 10, "maxEth": 1.5, "retries": 1, "abortOnError": false }
+    },
+    {
+      "id": "ver-helena",
+      "name": "Helena Costa",
+      "bio": "Independent verifier with 12 years in environmental auditing. Stakes carefully, reads every IPFS hash before approving, and documents challenges in detail before filing them.",
+      "age": 46,
+      "gender": "female",
+      "mbti": "ISTJ",
+      "country": "Portugal",
+      "profession": "Environmental auditor",
+      "interested_topics": ["additionality", "satellite MRV", "challenge evidence"],
+      "role": "verifier",
+      "journeys": ["verifier-stake-challenge-window"],
+      "behaviour": { "riskTolerance": 0.2, "maxTx": 8, "maxEth": 3, "retries": 2, "abortOnError": true }
+    },
+    {
+      "id": "buy-sam",
+      "name": "Sam Okafor",
+      "bio": "Corporate sustainability manager buying offsets for an annual disclosure. Cares about one thing: an auditable retirement certificate issued in her company's name.",
+      "age": 33,
+      "gender": "female",
+      "mbti": "ENTJ",
+      "country": "Nigeria",
+      "profession": "Sustainability manager",
+      "interested_topics": ["retirement certificates", "audit trail", "price"],
+      "role": "buyer",
+      "journeys": ["buyer-list-buy-retire-certify", "race-two-buyers-one-listing", "compensation-claim-after-slash"],
+      "behaviour": { "riskTolerance": 0.5, "maxTx": 12, "maxEth": 2, "retries": 2, "abortOnError": false }
+    },
+    {
+      "id": "buy-lee",
+      "name": "Lee Wan",
+      "bio": "Trader who flips small lots of credits. Lists, cancels and re-lists constantly, and probes boundaries like splitting a batch twice to see what the contract allows.",
+      "age": 29,
+      "gender": "male",
+      "mbti": "ENTP",
+      "country": "Malaysia",
+      "profession": "Carbon trader",
+      "interested_topics": ["liquidity", "fractionalization", "marketplace limits"],
+      "role": "buyer",
+      "journeys": ["buyer-list-buy-retire-certify", "negative-boundaries", "negative-permissions"],
+      "behaviour": { "riskTolerance": 0.8, "maxTx": 20, "maxEth": 3, "retries": 3, "abortOnError": false }
+    },
+    {
+      "id": "reg-panel",
+      "name": "Panel delegate (rotating)",
+      "bio": "Acts for the 3-of-5 regulator panel. Only moves when evidence is already on-chain, and expects to be audited for every approval.",
+      "age": 52,
+      "gender": "unspecified",
+      "mbti": "INTJ",
+      "country": "Switzerland",
+      "profession": "Regulatory panel delegate",
+      "interested_topics": ["due process", "threshold approvals", "slashing"],
+      "role": "regulator",
+      "journeys": ["regulator-3of5-resolution", "negative-permissions"],
+      "behaviour": { "riskTolerance": 0.1, "maxTx": 6, "maxEth": 0.2, "retries": 1, "abortOnError": true }
+    }
+  ]
+}

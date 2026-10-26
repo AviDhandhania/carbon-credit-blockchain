@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { diagnostics } from '../utils/diagnostics';
 
 function VerifierStakePanel({ provider, signer, account, contractAddress, contractABI, creditTokenAddress, creditTokenABI }) {
   const [contract, setContract] = useState(null);
   const [verifierInfo, setVerifierInfo] = useState(null);
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
   const [depositForm, setDepositForm] = useState({ amount: '' });
   const [withdrawForm, setWithdrawForm] = useState({ amount: '' });
@@ -57,7 +59,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
             challengerWon: c[6]
           });
         } catch (e) {
-          // Challenge might not exist
+          diagnostics.expectedMiss(`challenge ${i} lookup`, e);
         }
       }
       setChallenges(allChallenges);
@@ -65,9 +67,20 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       const defaultWindow = await contract.defaultChallengeWindow();
       setDefaultWindowDays(Number(defaultWindow) / 86400);
     } catch (err) {
-      console.error('Error loading verifier stake data:', err);
+      diagnostics.contractError('VerifierStakePanel.loadData', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // One flag per action: a shared one made every button read "Depositing..."
+  // while the panel was merely refreshing its data.
+  const run = (key, handler) => async (e) => {
+    setBusy(key);
+    try {
+      await handler(e);
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -85,7 +98,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
         const token = new ethers.Contract(creditTokenAddress, creditTokenABI, signer || provider);
         holding = await token.getUserBatchBalance(batchId, account);
       } catch (e) {
-        // Credit token not reachable; leave the holding at zero.
+        diagnostics.expectedMiss('batch holding lookup for compensation', e);
       }
 
       setCompInfo({
@@ -96,6 +109,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
         holding: ethers.formatUnits(holding, 18)
       });
     } catch (err) {
+      diagnostics.expectedMiss('compensation pool info', err);
       setCompInfo(null);
     }
   };
@@ -112,6 +126,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       loadData();
       setDepositForm({ amount: '' });
     } catch (err) {
+      diagnostics.txError('depositStake', err);
       setError('Deposit failed: ' + err.message);
     }
   };
@@ -126,6 +141,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       loadData();
       setWithdrawForm({ amount: '' });
     } catch (err) {
+      diagnostics.txError('withdrawStake', err);
       setError('Withdraw failed: ' + err.message);
     }
   };
@@ -144,6 +160,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       loadData();
       setChallengeForm({ batchId: '', evidenceHash: '' });
     } catch (err) {
+      diagnostics.txError('createChallenge', err);
       setError('Challenge failed: ' + err.message);
     }
   };
@@ -161,6 +178,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       loadData();
       setResolveForm({ challengeId: '', result: 'true' });
     } catch (err) {
+      diagnostics.txError('resolveChallenge', err);
       setError('Resolve failed: ' + err.message);
     }
   };
@@ -175,6 +193,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       loadData();
       loadCompensation(compForm.batchId);
     } catch (err) {
+      diagnostics.txError('claimCompensation', err);
       setError('Claim failed: ' + err.message);
     }
   };
@@ -190,6 +209,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       loadData();
       setWindowForm({ ...windowForm, days: '' });
     } catch (err) {
+      diagnostics.txError('setDefaultChallengeWindow', err);
       setError('Window update failed: ' + err.message);
     }
   };
@@ -204,6 +224,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       await tx.wait();
       loadData();
     } catch (err) {
+      diagnostics.txError('setBatchChallengeWindow', err);
       setError('Batch window update failed: ' + err.message);
     }
   };
@@ -216,6 +237,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       await tx.wait();
       loadData();
     } catch (err) {
+      diagnostics.txError('clearBatchChallengeWindow', err);
       setError('Clearing override failed: ' + err.message);
     }
   };
@@ -253,7 +275,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
         <div>
           <h3>Deposit Stake (Min 1 ETH)</h3>
-          <form onSubmit={handleDeposit}>
+          <form onSubmit={run('deposit', handleDeposit)}>
             <div className="form-group">
               <label>Amount (ETH)</label>
               <input
@@ -266,15 +288,15 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
                 required
               />
             </div>
-            <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
-              {loading ? 'Depositing...' : 'Deposit Stake'}
+            <button type="submit" className="btn btn-primary" disabled={loading || !!busy || !signer}>
+              {busy === 'deposit' ? 'Depositing...' : 'Deposit Stake'}
             </button>
           </form>
         </div>
 
         <div>
           <h3>Withdraw Stake</h3>
-          <form onSubmit={handleWithdraw}>
+          <form onSubmit={run('withdraw', handleWithdraw)}>
             <div className="form-group">
               <label>Amount (ETH)</label>
               <input
@@ -286,15 +308,15 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
                 required
               />
             </div>
-            <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
-              {loading ? 'Withdrawing...' : 'Withdraw Stake'}
+            <button type="submit" className="btn btn-primary" disabled={loading || !!busy || !signer}>
+              {busy === 'withdraw' ? 'Withdrawing...' : 'Withdraw Stake'}
             </button>
           </form>
         </div>
 
         <div>
           <h3>Create Challenge</h3>
-          <form onSubmit={handleChallenge}>
+          <form onSubmit={run('challenge', handleChallenge)}>
             <div className="form-group">
               <label>Batch ID to Challenge</label>
               <input
@@ -320,15 +342,15 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
                 Challenge bond: 0.1 ETH (returned if challenge fails)
               </label>
             </div>
-            <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
-              {loading ? 'Challenging...' : 'Create Challenge'}
+            <button type="submit" className="btn btn-primary" disabled={loading || !!busy || !signer}>
+              {busy === 'challenge' ? 'Challenging...' : 'Create Challenge'}
             </button>
           </form>
         </div>
 
         <div>
           <h3>Resolve Challenge (Regulator)</h3>
-          <form onSubmit={handleResolve}>
+          <form onSubmit={run('resolve', handleResolve)}>
             <div className="form-group">
               <label>Challenge ID</label>
               <input
@@ -349,8 +371,8 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
                 <option value="false">Verifier Wins (Keep Stake)</option>
               </select>
             </div>
-            <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
-              {loading ? 'Resolving...' : 'Resolve Challenge'}
+            <button type="submit" className="btn btn-primary" disabled={loading || !!busy || !signer}>
+              {busy === 'resolve' ? 'Resolving...' : 'Resolve Challenge'}
             </button>
           </form>
         </div>
@@ -363,7 +385,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
             When a challenge succeeds, the buyers' half of the slashed stake is held
             per batch. Holders withdraw their pro-rata share here.
           </p>
-          <form onSubmit={handleClaimCompensation}>
+          <form onSubmit={run('claim', handleClaimCompensation)}>
             <div className="form-group">
               <label>Batch ID</label>
               <input
@@ -377,8 +399,8 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
                 required
               />
             </div>
-            <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
-              {loading ? 'Claiming...' : 'Claim Compensation'}
+            <button type="submit" className="btn btn-primary" disabled={loading || !!busy || !signer}>
+              {busy === 'claim' ? 'Claiming...' : 'Claim Compensation'}
             </button>
           </form>
 
@@ -399,7 +421,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
             Default window: {defaultWindowDays === null ? '-' : `${defaultWindowDays} days`}.
             Bounds are 1 to 365 days.
           </p>
-          <form onSubmit={handleSetDefaultWindow}>
+          <form onSubmit={run('defaultWindow', handleSetDefaultWindow)}>
             <div className="form-group">
               <label>New default window (days)</label>
               <input
@@ -411,12 +433,12 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
                 required
               />
             </div>
-            <button type="submit" className="btn btn-primary" disabled={loading || !signer}>
+            <button type="submit" className="btn btn-primary" disabled={loading || !!busy || !signer}>
               Set Default Window
             </button>
           </form>
 
-          <form onSubmit={handleSetBatchWindow} style={{ marginTop: '1rem' }}>
+          <form onSubmit={run('batchWindow', handleSetBatchWindow)} style={{ marginTop: '1rem' }}>
             <div className="form-group">
               <label>Batch ID for override</label>
               <input
@@ -427,7 +449,7 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
                 required
               />
             </div>
-            <button type="submit" className="btn btn-secondary" disabled={loading || !signer}>
+            <button type="submit" className="btn btn-secondary" disabled={loading || !!busy || !signer}>
               Set Per-Batch Window
             </button>
             {windowForm.batchId && (
@@ -435,8 +457,8 @@ function VerifierStakePanel({ provider, signer, account, contractAddress, contra
                 type="button"
                 className="btn btn-secondary"
                 style={{ marginLeft: '0.5rem' }}
-                onClick={() => handleClearBatchWindow(windowForm.batchId)}
-                disabled={loading || !signer}
+                onClick={run('clearWindow', () => handleClearBatchWindow(windowForm.batchId))}
+                disabled={loading || !!busy || !signer}
               >
                 Clear Override
               </button>

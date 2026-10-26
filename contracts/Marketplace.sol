@@ -113,7 +113,10 @@ contract Marketplace is AccessControl, ReentrancyGuard {
         listing.amount -= amount;
         listingPurchases[listingId][msg.sender] += amount;
 
-        creditToken.transferFrom(listing.seller, msg.sender, amount);
+        // Batch-faithful settlement: transferFrom walks the seller's batches
+        // oldest-first, so a listing for batch X could deliver batch Y when the
+        // seller holds several batches.
+        creditToken.transferBatchFrom(listing.seller, msg.sender, listing.batchId, amount);
 
         if (msg.value > totalPrice) {
             payable(msg.sender).transfer(msg.value - totalPrice);

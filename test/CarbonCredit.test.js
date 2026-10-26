@@ -145,6 +145,7 @@ describe("Marketplace", function () {
     await marketplace.waitForDeployment();
 
     await creditToken.grantMinterRole(seller.address);
+    await creditToken.grantBatchTransferRole(await marketplace.getAddress());
     await marketplace.grantBuyerRole(buyer1.address);
     await marketplace.grantBuyerRole(buyer2.address);
     await marketplace.grantBuyerRole(seller.address);
@@ -276,6 +277,91 @@ describe("Marketplace", function () {
       expect(listing[4]).to.be.false;
       expect(listing[2]).to.equal(0);
     });
+
+    it("Should deliver the batch named by the listing when the seller holds several", async function () {
+      // The second batch is newer, so an oldest-first transfer would hand the
+      // buyer batch 1 instead of the listed batch 2 (the DA3 defect).
+      await creditToken.connect(seller).mintBatch("PROJ-002", "QmSecondHash", INITIAL_AMOUNT);
+
+      const listedAmount = ethers.parseUnits("100", 18);
+      const secondListing = await marketplace
+        .connect(seller)
+        .createListing.staticCall(2, listedAmount, PRICE_PER_TOKEN);
+      await marketplace.connect(seller).createListing(2, listedAmount, PRICE_PER_TOKEN);
+
+      await marketplace
+        .connect(buyer1)
+        .buyTokens(secondListing, listedAmount, {
+          value: (listedAmount / 10n ** 18n) * PRICE_PER_TOKEN,
+        });
+
+      expect(await creditToken.getUserBatchBalance(2, buyer1.address)).to.equal(listedAmount);
+      expect(await creditToken.getUserBatchBalance(1, buyer1.address)).to.equal(0);
+      expect(await creditToken.activeBatchCount(buyer1.address)).to.equal(1);
+    });
+
+    it("Should restrict the batch-faithful path to the marketplace role", async function () {
+      await expect(
+        creditToken.connect(buyer1).transferBatchFrom(seller.address, buyer1.address, 1, 1)
+      ).to.be.revertedWithCustomError(creditToken, "AccessControlUnauthorizedAccount");
+    });
+
+    it("Should still require the seller's allowance for a batch-faithful sale", async function () {
+      await creditToken.grantBatchTransferRole(buyer1.address);
+      await expect(
+        creditToken.connect(buyer1).transferBatchFrom(seller.address, buyer1.address, 1, 1)
+      ).to.be.revertedWith("Insufficient allowance");
+    });
+  });
+});
+
+describe("CreditToken: burn and batch accounting", function () {
+  let creditToken, owner, holder, other;
+  const AMOUNT = ethers.parseUnits("1000", 18);
+
+  beforeEach(async function () {
+    [owner, holder, other] = await ethers.getSigners();
+
+    const CreditToken = await ethers.getContractFactory("CreditToken");
+    creditToken = await CreditToken.deploy(owner.address);
+    await creditToken.waitForDeployment();
+
+    await creditToken.grantMinterRole(holder.address);
+    await creditToken.connect(holder).mintBatch("P1", "ipfs-1", AMOUNT);
+  });
+
+  it("Should reject the inherited permissionless burn", async function () {
+    await expect(creditToken.connect(holder).burn(1)).to.be.revertedWith("Use retireBatch");
+    await expect(creditToken.connect(other).burnFrom(holder.address, 1)).to.be.revertedWith(
+      "Use retireBatchFrom"
+    );
+  });
+
+  it("Should keep activeBatchCount in step across transfer, split and retirement", async function () {
+    const part = ethers.parseUnits("100", 18);
+    await creditToken.connect(holder).transfer(other.address, part);
+    expect(await creditToken.activeBatchCount(other.address)).to.equal(1);
+    expect(await creditToken.activeBatchCount(holder.address)).to.equal(1);
+
+    const child = await creditToken.connect(holder).splitBatch.staticCall(1, part, "P1-A");
+    await creditToken.connect(holder).splitBatch(1, part, "P1-A");
+    expect(await creditToken.activeBatchCount(holder.address)).to.equal(2);
+
+    await creditToken.connect(holder).retireBatch(child, part);
+    expect(await creditToken.activeBatchCount(holder.address)).to.equal(1);
+  });
+
+  it("Should retire in gas that does not grow with the holder's batch history", async function () {
+    await creditToken.grantMinterRole(other.address);
+    for (let i = 0; i < 30; i++) {
+      await creditToken.connect(other).mintBatch(`P-${i}`, "ipfs-x", AMOUNT);
+    }
+
+    const small = await (await creditToken.connect(holder).retireBatch(1, 1)).wait();
+    const large = await (await creditToken.connect(other).retireBatch(31, 1)).wait();
+
+    // Before the index map this difference was one cold SLOAD per held batch.
+    expect(Number(large.gasUsed - small.gasUsed)).to.be.lessThan(30000);
   });
 });
 

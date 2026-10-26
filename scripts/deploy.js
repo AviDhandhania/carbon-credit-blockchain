@@ -83,6 +83,11 @@ async function main() {
   const mrvOracleAddress = await mrvOracle.getAddress();
   console.log("MockMRVOracle deployed to:", mrvOracleAddress);
 
+  // Granted only after every create, so the six contract addresses stay
+  // deterministic and frontend/src/utils/contracts.js keeps pointing at them.
+  await creditToken.grantBatchTransferRole(marketplaceAddress);
+  console.log("BATCH_TRANSFER_ROLE granted to Marketplace");
+
   // VerifierStake roles
   await verifierStake.grantVerifierRole(deployer.address);
   await verifierStake.grantRegulatorRole(deployer.address);

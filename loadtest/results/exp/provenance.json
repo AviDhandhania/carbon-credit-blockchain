@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-10-22T06:29:37Z",
+  "gitRevision": "964906a9b8487110d48d6bd98c203cc33b2901aa",
+  "gitDirtyFiles": 31,
+  "node": "v24.18.0",
+  "k6": "k6.exe v2.2.0 (commit/00a9a1b7f5, go1.26.5, windows/amd64)",
+  "host": "LAPTOP-DFCMONJL",
+  "cpu": "AMD Ryzen 5 7235HS                              x8",
+  "memory": "11.7 GiB",
+  "rpcUrl": "http://127.0.0.1:8545",
+  "chain": "Hardhat node (automine, in-process EVM, 20 unlocked accounts)",
+  "baselineContract": "0x998abeb3E57409262aE5b751f60747921B33613E",
+  "batchPool": 400,
+  "multisig": "3-of-5",
+  "levels": ["10","50","100","250","500","1000"],
+  "repetitions": 3,
+  "phases": { "warmup": "60s", "measure": "180s", "cooldown": "30s" }
+}

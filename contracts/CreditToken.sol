@@ -9,6 +9,9 @@ import "./interfaces/IMRVOracle.sol";
 contract CreditToken is ERC20, ERC20Burnable, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+    /// @notice Held by the marketplace, the only caller allowed to move a named
+    /// batch instead of the holder's oldest batches.
+    bytes32 public constant BATCH_TRANSFER_ROLE = keccak256("BATCH_TRANSFER_ROLE");
 
     struct Batch {
         uint256 batchId;
@@ -25,6 +28,11 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
     mapping(uint256 => Batch) public batches;
     mapping(uint256 => mapping(address => uint256)) public batchBalances;
     mapping(address => uint256[]) public userBatches;
+    /// @dev 1-based position of a batch inside userBatches[user], so a batch can
+    /// be dropped in constant time instead of scanning the holder's whole list.
+    mapping(address => mapping(uint256 => uint256)) private _batchIndex;
+    /// @notice Number of distinct batches a holder currently has a balance in.
+    mapping(address => uint256) public activeBatchCount;
     /// @notice Child batch -> batch it was fractionalized from (0 for originals).
     mapping(uint256 => uint256) public batchParent;
     /// @notice Circulating supply per batch, so a compensation pool can be
@@ -91,7 +99,7 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
         _mint(msg.sender, amount);
         batchBalances[batchId][msg.sender] = amount;
         batchSupply[batchId] = amount;
-        userBatches[msg.sender].push(batchId);
+        _addBatchToUser(msg.sender, batchId);
 
         emit BatchMinted(batchId, projectId, msg.sender, ipfsHash, amount, block.timestamp);
         return batchId;
@@ -115,8 +123,10 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
             uint256 batchId = list[i];
             uint256 bal = batchBalances[batchId][from];
             if (bal == 0) {
-                list[i] = list[list.length - 1];
-                list.pop();
+                // Defensive: every list entry is tracked and positive by the
+                // invariants of _addBatchToUser/_removeBatchFromUser, so this
+                // only runs if that invariant were ever broken.
+                _removeBatchFromUser(from, batchId);
                 continue;
             }
             // A flagged batch is frozen: its credits cannot change hands. This
@@ -128,13 +138,63 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
 
             uint256 move = bal < remaining ? bal : remaining;
             batchBalances[batchId][from] = bal - move;
-            if (batchBalances[batchId][to] == 0) {
-                userBatches[to].push(batchId);
-            }
+            _addBatchToUser(to, batchId);
             batchBalances[batchId][to] += move;
             remaining -= move;
-            i++;
+            if (batchBalances[batchId][from] == 0) {
+                _removeBatchFromUser(from, batchId);
+            } else {
+                i++;
+            }
         }
+    }
+
+    /**
+     * @notice Move credits of one *named* batch. Only the marketplace holds this
+     * role. `transferFrom` has to walk the sender's batches oldest-first, which
+     * means a listing could deliver a different batch from the one it named; this
+     * path keeps the purchase faithful to the listing.
+     */
+    function transferBatchFrom(
+        address from,
+        address to,
+        uint256 batchId,
+        uint256 amount
+    ) external onlyRole(BATCH_TRANSFER_ROLE) returns (bool) {
+        require(to != address(0), "ERC20: transfer to the zero address");
+        require(amount > 0, "Amount must be > 0");
+        require(batchBalances[batchId][from] >= amount, "Insufficient batch balance");
+        require(!batches[batchId].isFlagged, "Batch is flagged");
+
+        // The role grants the ability to move a named batch, not to spend
+        // without consent: the owner still has to approve the marketplace.
+        uint256 allowed = allowance(from, msg.sender);
+        require(allowed >= amount, "Insufficient allowance");
+        _approve(from, msg.sender, allowed - amount);
+
+        // Skip the generic oldest-first hook; this call names its batch.
+        super._update(from, to, amount);
+
+        batchBalances[batchId][from] -= amount;
+        _addBatchToUser(to, batchId);
+        batchBalances[batchId][to] += amount;
+        if (batchBalances[batchId][from] == 0) {
+            _removeBatchFromUser(from, batchId);
+        }
+        return true;
+    }
+
+    /**
+     * @dev Retirement is the only sanctioned burn path: it updates per-batch
+     * supply and mints a certificate. The inherited permissionless burn would
+     * desynchronise batch accounting, so it is disabled.
+     */
+    function burn(uint256) public pure override {
+        revert("Use retireBatch");
+    }
+
+    function burnFrom(address, uint256) public pure override {
+        revert("Use retireBatchFrom");
     }
 
     function retireBatch(uint256 batchId, uint256 amount) external {
@@ -164,22 +224,7 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
         }
 
         if (batchBalances[batchId][from] == 0) {
-            uint256[] storage userBatchList = userBatches[from];
-            for (uint256 i = 0; i < userBatchList.length; i++) {
-                if (userBatchList[i] == batchId) {
-                    userBatchList[i] = userBatchList[userBatchList.length - 1];
-                    userBatchList.pop();
-                    break;
-                }
-            }
-        }
-
-        uint256 totalRemaining = 0;
-        for (uint256 i = 0; i < userBatches[from].length; i++) {
-            totalRemaining += batchBalances[userBatches[from][i]][from];
-        }
-        if (totalRemaining == 0) {
-            delete userBatches[from];
+            _removeBatchFromUser(from, batchId);
         }
 
         emit BatchRetired(batchId, amount);
@@ -210,7 +255,9 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
 
         batchBalances[batchId][msg.sender] -= amount;
         batchSupply[batchId] -= amount;
-        _removeBatchFromUserIfEmpty(msg.sender, batchId);
+        if (batchBalances[batchId][msg.sender] == 0) {
+            _removeBatchFromUser(msg.sender, batchId);
+        }
 
         childBatchId = ++_batchIds;
         Batch storage child = batches[childBatchId];
@@ -226,21 +273,34 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
         batchParent[childBatchId] = batchId;
         batchSupply[childBatchId] = amount;
         batchBalances[childBatchId][msg.sender] = amount;
-        userBatches[msg.sender].push(childBatchId);
+        _addBatchToUser(msg.sender, childBatchId);
 
         emit BatchSplit(batchId, childBatchId, msg.sender, amount);
     }
 
-    function _removeBatchFromUserIfEmpty(address user, uint256 batchId) internal {
-        if (batchBalances[batchId][user] != 0) return;
-        uint256[] storage list = userBatches[user];
-        for (uint256 i = 0; i < list.length; i++) {
-            if (list[i] == batchId) {
-                list[i] = list[list.length - 1];
-                list.pop();
-                break;
-            }
+    /// @dev Record that `user` holds `batchId`. No-op when it is already listed,
+    /// so callers do not need to know the holder's current batch list.
+    function _addBatchToUser(address user, uint256 batchId) internal {
+        if (_batchIndex[user][batchId] != 0) return;
+        userBatches[user].push(batchId);
+        _batchIndex[user][batchId] = userBatches[user].length; // 1-based
+        activeBatchCount[user] += 1;
+    }
+
+    /// @dev Drop `batchId` from `user` in constant time (swap-and-pop with the
+    /// index map), so retirement cost does not grow with the holder's history.
+    function _removeBatchFromUser(address user, uint256 batchId) internal {
+        uint256 idx = _batchIndex[user][batchId];
+        if (idx == 0) return;
+        uint256 lastIdx = userBatches[user].length;
+        if (idx != lastIdx) {
+            uint256 lastBatch = userBatches[user][lastIdx - 1];
+            userBatches[user][idx - 1] = lastBatch;
+            _batchIndex[user][lastBatch] = idx;
         }
+        userBatches[user].pop();
+        delete _batchIndex[user][batchId];
+        activeBatchCount[user] -= 1;
     }
 
     function flagBatch(uint256 batchId, bool flagged) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -327,6 +387,10 @@ contract CreditToken is ERC20, ERC20Burnable, AccessControl {
 
     function grantVerifierRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _grantRole(VERIFIER_ROLE, account);
+    }
+
+    function grantBatchTransferRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _grantRole(BATCH_TRANSFER_ROLE, account);
     }
 
     function revokeMinterRole(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {

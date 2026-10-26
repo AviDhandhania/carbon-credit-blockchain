@@ -188,11 +188,91 @@ def novelty():
     fig.savefig(os.path.join(OUT, "novelty.png"), dpi=150, bbox_inches="tight")
     plt.close(fig)
 
+# ---------------------------------------------------------------- DA3 ARCHITECTURE
+def da3_architecture():
+    """The implemented system: six contracts, a wallet-only frontend, and the
+    off-chain components they depend on. Unlike the DA1 figure there is no REST
+    API and no database, because the implementation has neither. Contract
+    interactions are written into the boxes rather than drawn as arrows: the
+    calls cross the same contract band and arrows between those boxes were
+    easier to misread than to read."""
+    fig, ax = plt.subplots(figsize=(12.4, 8.8))
+    ax.set_xlim(0, 12.4); ax.set_ylim(0, 9.0); ax.axis("off")
+    ax.text(6.2, 8.65, "Implemented Architecture: Six-Contract Carbon Credit System",
+            ha="center", fontsize=14, weight="bold", color=NAVY)
+
+    bands = [("ACTORS", 7.35, 1.2, "#eef2f7"),
+             ("PRESENTATION", 5.75, 1.35, "#e6f4f1"),
+             ("ON-CHAIN CONTRACTS", 2.55, 2.95, "#e8f5e9"),
+             ("OFF-CHAIN", 0.35, 1.75, "#fff5e0")]
+    for name, y, h, c in bands:
+        ax.add_patch(FancyBboxPatch((0.25, y), 11.9, h, boxstyle="round,pad=0.02",
+                                    fc=c, ec=GREY, lw=1))
+        ax.text(0.42, y + h / 2, name, fontsize=7.5, weight="bold", color=NAVY,
+                rotation=90, ha="center", va="center")
+
+    # actors
+    box(ax, 0.8, 7.55, 2.5, 0.8, "Developer\n(mints batches)", NAVY, fs=8.5)
+    box(ax, 3.6, 7.55, 2.5, 0.8, "Verifier\n(stakes, attests)", NAVY, fs=8.5)
+    box(ax, 6.4, 7.55, 2.5, 0.8, "Buyer / holder\n(trades, retires)", NAVY, fs=8.5)
+    box(ax, 9.2, 7.55, 2.7, 0.8, "Regulator panel\n(3-of-5 owners)", NAVY, fs=8.5)
+
+    # presentation
+    box(ax, 0.8, 5.95, 3.4, 0.9, "React + Vite DApp\n(ethers.js, no backend)", TEAL, fs=8.5)
+    box(ax, 4.6, 5.95, 3.4, 0.9, "MetaMask / EIP-1193\n(wallet, signing)", TEAL, fs=8.5)
+    box(ax, 8.4, 5.95, 3.5, 0.9, "Six contract panels\nErrorBanner + diagnostics", TEAL, fs=8.5)
+
+    # contracts - row 1
+    box(ax, 0.55, 4.15, 3.55, 1.1,
+        "CreditToken\nERC-20 + batch ledger, splitBatch,\nflag/freeze, optional MRV gate\n"
+        "Marketplace moves it; Retire burns it", GREEN, fs=7.5)
+    box(ax, 4.4, 4.15, 3.55, 1.1,
+        "Marketplace\nlist / cancel / reprice / buyTokens\n"
+        "credits move via CreditToken.transferFrom", GREEN, fs=7.5)
+    box(ax, 8.25, 4.15, 3.6, 1.1,
+        "RetireAndCertify\nburn + soulbound ERC-721 certificate\n"
+        "burn via CreditToken.retireBatchFrom", GREEN, fs=7.5)
+
+    # contracts - row 2
+    box(ax, 0.55, 2.7, 3.55, 1.1,
+        "VerifierStake\nstake, challenge windows, slash\nper-batch pro-rata compensation\n"
+        "flags the batch on CreditToken", GREEN, fs=7.5)
+    box(ax, 4.4, 2.7, 3.55, 1.1,
+        "RegulatorMultisig\n3-of-5 propose + approve\nholds REGULATOR_ROLE\n"
+        "executes VerifierStake.resolveChallenge", GREEN, fs=7.5)
+    box(ax, 8.25, 2.7, 3.6, 1.1,
+        "MockMRVOracle\nimplements IMRVOracle (settable)\nCreditToken.mintBatch reads its\n"
+        "approval + evidence attestation", GREEN, fs=7.5)
+
+    # off-chain components
+    box(ax, 0.8, 0.55, 2.6, 1.25,
+        "IPFS\nproject & challenge evidence\n(only hashes on chain)", AMBER, tc="#3a2f00", fs=8)
+    box(ax, 3.7, 0.55, 2.6, 1.25,
+        "MRV source\nsatellite / sensors / registry\n(adapter; mock in this build)", AMBER, tc="#3a2f00", fs=8)
+    box(ax, 6.6, 0.55, 2.5, 1.25,
+        "Hardhat node\nlocal chain, automine\ndeploy + role wiring", AMBER, tc="#3a2f00", fs=8)
+    box(ax, 9.4, 0.55, 2.5, 1.25,
+        "k6 harness\nsweep, stress, spike,\nendurance, staking", AMBER, tc="#3a2f00", fs=8)
+
+    for x in (2.05, 4.85, 7.65, 10.55):
+        arrow(ax, x, 7.55, x, 6.85)
+    for x in (2.5, 6.3, 10.15):
+        arrow(ax, x, 5.95, x, 5.25)
+
+    ax.text(6.2, 2.42,
+            "Only hashes and attestations cross the chain boundary. The frontend reads and writes "
+            "these contracts through the wallet; there is no application server or database tier.",
+            ha="center", fontsize=7.2, style="italic", color="#4b5563")
+
+    fig.savefig(os.path.join(OUT, "da3_architecture.png"), dpi=160, bbox_inches="tight")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
-    architecture(); workflow(); sequence(); gantt(); novelty()
+    architecture(); workflow(); sequence(); gantt(); novelty(); da3_architecture()
     print("Diagrams written to", OUT)
     # ponytail: quick self-check that all PNGs exist and are non-empty
-    for f in ("architecture", "workflow", "sequence", "gantt", "novelty"):
+    for f in ("architecture", "workflow", "sequence", "gantt", "novelty", "da3_architecture"):
         p = os.path.join(OUT, f + ".png")
         assert os.path.getsize(p) > 1000, f"{f}.png missing/too small"
     print("self-check OK")
