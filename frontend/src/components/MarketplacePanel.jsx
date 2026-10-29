@@ -48,7 +48,7 @@ function MarketplacePanel({ provider, signer, account, contractAddress, contract
             });
           }
         } catch (e) {
-          diagnostics.expectedMiss(`listing ${listingId} lookup`, e);
+          diagnostics.expectedMiss(`listing ${i} lookup`, e);
         }
       }
       setListings(activeListings);
@@ -86,9 +86,13 @@ function MarketplacePanel({ provider, signer, account, contractAddress, contract
       const amount = ethers.parseUnits(createForm.amount, 18);
       const price = ethers.parseEther(createForm.price);
       
-      // First approve
-      const approveTx = await creditToken.approve(contractAddress, amount);
-      await approveTx.wait();
+      // Check allowance first to avoid redundant approval and nonce race
+      const allowance = await creditToken.allowance(account, contractAddress);
+      if (allowance < amount) {
+        const approveTx = await creditToken.approve(contractAddress, amount);
+        await approveTx.wait();
+        await new Promise((r) => setTimeout(r, 400));
+      }
       
       // Then create listing
       const tx = await contract.createListing(

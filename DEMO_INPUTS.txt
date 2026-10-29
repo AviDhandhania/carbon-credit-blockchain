@@ -1,0 +1,132 @@
+================================================================================
+   🌿 CARBON CREDIT TRADING SYSTEM — LIVE DEMO SAMPLE INPUTS CHEAT SHEET
+================================================================================
+Keep this text file open side-by-side with your browser so you can quickly
+copy and paste inputs during your presentation.
+
+--------------------------------------------------------------------------------
+0. METAMASK & NETWORK SETUP
+--------------------------------------------------------------------------------
+Network Name:      Localhost Hardhat
+RPC URL:           http://127.0.0.1:8545
+Chain ID:          31337
+Currency Symbol:   ETH
+
+Deployer Private Key (Account #0 - holds 10,000 ETH & default protocol roles):
+0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+
+Deployer Address:
+0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+
+App URL:
+http://localhost:3000
+
+
+--------------------------------------------------------------------------------
+ACT 1: MINT NEW CARBON CREDIT BATCH (Credit Token Panel)
+--------------------------------------------------------------------------------
+Project ID:
+SOLAR-FARM-01
+
+IPFS Hash:
+QmSolarAuditEvidence123
+
+Amount (tonnes CO2):
+500
+
+-> Result: Mints 500 CC under a new batch ID with audit hash linked.
+
+
+--------------------------------------------------------------------------------
+ACT 2: BATCH FRACTIONALIZATION / SPLIT BATCH (Credit Token Panel)
+--------------------------------------------------------------------------------
+Parent Batch ID:
+1
+
+Amount to Split (tonnes CO2):
+100
+
+Child Project ID:
+SOLAR-RETAIL-TRANCHE
+
+-> Talking Point: Total supply is unchanged. A 100 CC tranche is regrouped into
+   a child batch for retail trading while inheriting the parent's audit lineage.
+
+
+--------------------------------------------------------------------------------
+ACT 3: CREATE MARKETPLACE LISTING (Marketplace Panel)
+--------------------------------------------------------------------------------
+Batch ID:
+1
+
+Amount (CC):
+50
+
+Price per CC (ETH):
+0.005
+
+-> Result: Listing appears in "Active Listings" and the "Buy Credits" dropdown.
+
+
+--------------------------------------------------------------------------------
+ACT 4: BUY CARBON CREDITS (Marketplace Panel)
+--------------------------------------------------------------------------------
+Listing ID:
+Select from dropdown (e.g. #1)
+
+Amount to Buy (CC):
+10
+
+-> Talking Point: Demonstrates batch-faithful settlement. The buyer receives
+   the exact project batch advertised, not a generic or substituted token.
+
+
+--------------------------------------------------------------------------------
+ACT 5: RETIRE CREDITS & MINT CERTIFICATE (Retire & Certify Panel)
+--------------------------------------------------------------------------------
+Batch ID:
+1
+
+Amount (CC):
+20
+
+Metadata URI (IPFS):
+ipfs://QmRetireProofCertificate
+
+-> Result: Mints a Soulbound ERC-721 NFT (non-transferable proof of offset).
+   * NEW FEATURE: Click "Inspect NFT" to pop open the verified certificate modal!
+   * Click "View on IPFS" to view the instant local metadata JSON with zero gateway errors.
+
+
+
+--------------------------------------------------------------------------------
+ACT 6: VERIFIER STAKE & DISPUTE (Verifier Stake & Challenge Panel)
+--------------------------------------------------------------------------------
+[Deposit Stake Form]
+Amount (ETH):
+2.0
+
+[Challenge Batch Form]
+Batch ID:
+1
+
+Evidence IPFS Hash:
+QmDisputeEvidenceHash456
+
+-> Talking Point: Verifiers must deposit stake (economic skin-in-the-game).
+   Anyone can raise a challenge with a 0.1 ETH bond during the dispute window.
+
+
+--------------------------------------------------------------------------------
+ACT 7: 3-OF-5 REGULATOR MULTISIG GOVERNANCE (Regulator Multisig Panel)
+--------------------------------------------------------------------------------
+Challenge ID to Propose / Approve:
+1
+
+Result:
+Challenger Wins (Slash Verifier)
+
+-> Talking Point: Replaces single-key regulation. Resolving a challenge requires
+   consensus from 3 distinct panel members. Slashed funds automatically fund
+   a pro-rata compensation pool for buyers of the disputed batch.
+================================================================================
